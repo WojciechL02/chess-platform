@@ -25,12 +25,7 @@ config.set_main_option("sqlalchemy.url", DATABASE_URL)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+target_metadata = [GameBase.metadata, CommonBase.metadata]
 
 
 def run_migrations_offline() -> None:
@@ -51,6 +46,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table="alembic_version_game",
     )
 
     with context.begin_transaction():
@@ -59,13 +55,23 @@ def run_migrations_offline() -> None:
 
 async def run_migrations_online_async():
     """Run migrations online using async engine."""
-    connectable = create_async_engine(DATABASE_URL, future=True)
+    import uuid
+    connectable = create_async_engine(
+        DATABASE_URL,
+        future=True,
+        connect_args={
+            "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
+        },
+    )
 
-    async with connectable.connect() as connection:
+    async with connectable.begin() as connection:
         # Wrap context.configure inside run_sync
         await connection.run_sync(lambda sync_conn: context.configure(
             connection=sync_conn,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
+            version_table="alembic_version_game",
         ))
         # Run migrations inside run_sync too
         await connection.run_sync(lambda sync_conn: context.run_migrations())
