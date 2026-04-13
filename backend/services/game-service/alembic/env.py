@@ -1,3 +1,5 @@
+import os
+import sys
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -5,6 +7,11 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from alembic import context
 import asyncio
+
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
 from common.models.game import Base as CommonBase
 from app.db import Base as GameBase
@@ -53,6 +60,15 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+def include_object(object, name, type_, reflected, compare_to):
+    # If it's a table, only let Alembic manage 'games' (and 'moves' if you want it to drop it)
+    # Tell it explicitly to IGNORE the 'user' table and other alembic tables
+    if type_ == "table":
+        if name in ["user", "alembic_version_users"]:
+            return False
+    return True
+
+
 async def run_migrations_online_async():
     """Run migrations online using async engine."""
     import uuid
@@ -72,6 +88,7 @@ async def run_migrations_online_async():
             connection=sync_conn,
             target_metadata=target_metadata,
             version_table="alembic_version_game",
+            include_object=include_object,
         ))
         # Run migrations inside run_sync too
         await connection.run_sync(lambda sync_conn: context.run_migrations())
