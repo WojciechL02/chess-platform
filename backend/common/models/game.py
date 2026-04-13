@@ -1,4 +1,5 @@
 import uuid
+from pydantic import BaseModel
 from datetime import datetime, UTC
 from sqlalchemy import Column, String, DateTime, Enum, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
@@ -15,12 +16,54 @@ class User(Base):
     __table_args__ = {"schema": "public"}
 
     id = Column(UUID(as_uuid=True), primary_key=True)
+    elo_rating = Column(Integer, default=1200)
+
+
+class RatingHistory(Base):
+    __tablename__ = "rating_history"
+    __table_args__ = {"schema": "public"}
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("public.user.id", ondelete="CASCADE"), nullable=False)
+    rating = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(UTC), nullable=False)
 
 
 class GameStatus(str, enum.Enum):
     waiting = "waiting"
     in_progress = "in_progress"
     finished = "finished"
+
+
+class GameRules(BaseModel):
+    total: float
+    add: float
+
+
+GAME_FORMATS = {
+    "bullet": GameRules(total=60.0, add=1.0),
+    "blitz": GameRules(total=180.0, add=2.0),
+    "rapid": GameRules(total=600.0, add=0.0),
+}
+
+
+class GameFormat(str, enum.Enum):
+    bullet = "bullet"
+    blitz = "blitz"
+    rapid = "rapid"
+
+    @property
+    def rules(self) -> GameRules:
+        """Fetches the validated Pydantic model for this format."""
+        return GAME_FORMATS[self.value]
+
+    @property
+    def total_time(self) -> float:
+        return self.rules.total
+
+    @property
+    def increment(self) -> float:
+        return self.rules.add
 
 
 class Game(Base):
@@ -31,32 +74,11 @@ class Game(Base):
     white_id = Column(UUID(as_uuid=True), ForeignKey("public.user.id", ondelete="CASCADE"), nullable=False)
     black_id = Column(UUID(as_uuid=True), ForeignKey("public.user.id", ondelete="CASCADE"), nullable=False)
     status = Column(Enum(GameStatus), default=GameStatus.waiting, nullable=False)
+    format = Column(Enum(GameFormat), nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.now(UTC), nullable=False)
     started_at = Column(DateTime(timezone=True), nullable=True)
     ended_at = Column(DateTime(timezone=True), nullable=True)
     winner_id = Column(UUID(as_uuid=True), ForeignKey("public.user.id", ondelete="SET NULL"), nullable=True)
 
-    # Relationships
-    moves = relationship("Move", back_populates="game", cascade="all, delete-orphan")
-
     def __repr__(self) -> str:
         return f"<Game(id={self.id}, status={self.status})>"
-
-
-class Move(Base):
-    __tablename__ = "moves"
-    __table_args__ = {"schema": "public"}
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    game_id = Column(UUID(as_uuid=True), ForeignKey("public.games.id", ondelete="CASCADE"), nullable=False)
-    player_id = Column(UUID(as_uuid=True), ForeignKey("public.user.id", ondelete="CASCADE"), nullable=False)
-    move_number = Column(Integer, nullable=False)
-    uci = Column(String, nullable=False)
-    fen = Column(String, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-
-    # Relationships
-    game = relationship("Game", back_populates="moves")
-
-    def __repr__(self) -> str:
-        return f"<Move(id={self.id}, move_number={self.move_number}, uci={self.uci})>"

@@ -10,6 +10,12 @@ class GameStatus(str, Enum):
     finished = "finished"
 
 
+class GameFormat(str, Enum):
+    bullet = "bullet"
+    blitz = "blitz"
+    rapid = "rapid"
+
+
 class GameBase(BaseModel):
     white_id: UUID
     black_id: UUID
@@ -23,6 +29,7 @@ class GameCreate(GameBase):
 class GameRead(GameBase):
     id: UUID
     status: GameStatus
+    format: GameFormat
     created_at: datetime
     started_at: datetime | None = None
     ended_at: datetime | None = None
