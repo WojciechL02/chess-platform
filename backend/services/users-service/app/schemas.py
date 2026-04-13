@@ -1,6 +1,7 @@
 import uuid
 from fastapi_users import schemas
 from pydantic import Field, BaseModel
+import datetime
 
 
 class UserPublic(BaseModel):
@@ -21,3 +22,25 @@ class UserCreate(schemas.BaseUserCreate):
 class UserUpdate(schemas.BaseUserUpdate):
     elo_rating: int | None = None
     nickname: str | None = None
+
+
+class GameHistory(BaseModel):
+    id: uuid.UUID
+    white_nickname: str
+    black_nickname: str
+    status: str
+    format: str
+    winner_id: uuid.UUID | None
+    created_at: datetime.datetime
+
+
+class RatingHistoryRead(BaseModel):
+    rating: int
+    created_at: datetime.datetime
+
+
+class WinRatio(BaseModel):
+    format: str
+    wins: int
+    total: int
+    ratio: float
