@@ -6,7 +6,7 @@ from datetime import datetime, UTC
 import json
 
 from .redis_utils import init_redis, close_redis
-from .worker import matchmaking_worker, MATCHMAKING_QUEUE
+from .worker import matchmaking_worker
 
 
 @asynccontextmanager
@@ -29,18 +29,20 @@ async def join_queue(websocket: WebSocket):
     await websocket.accept()
     r = websocket.app.state.redis
     user_id = None
+    game_format = None
 
     try:
         msg = await websocket.receive_text()
         user_data = json.loads(msg)
         user_id = user_data["user_id"]
+        game_format = user_data["game_format"]
         elo = int(user_data["elo"])
         nickname = user_data["nickname"]
         joined_at = datetime.now(UTC).timestamp()
 
         connections[user_id] = websocket
 
-        await r.zadd(MATCHMAKING_QUEUE, {user_id: elo})
+        await r.zadd(f"mm_{game_format}_queue", {user_id: elo})
         await r.hset(f"user:{user_id}", mapping={
             "elo": elo,
             "nickname": nickname,
@@ -52,8 +54,8 @@ async def join_queue(websocket: WebSocket):
             await asyncio.sleep(5)
 
     except WebSocketDisconnect:
-        if user_id:
-            await r.zrem(MATCHMAKING_QUEUE, user_id)
+        if user_id and game_format:
+            await r.zrem(f"mm_{game_format}_queue", user_id)
             connections.pop(user_id, None)
             print(f"User {user_id} disconnected")
 
