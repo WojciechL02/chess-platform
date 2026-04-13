@@ -22,27 +22,25 @@ async def join_match(websocket: WebSocket, user=Depends(authenticate_user_ws)):
     ws_url = MATCHMAKING_SERVICE_URL.replace("http", "ws") + "/ws/join"
     try:
         async with websockets.connect(ws_url) as ws_to_mm:
-            while True:
-                try:
-                    data = {
-                        "user_id": user["id"],
-                        "elo": user["elo_rating"],
-                        "nickname": user["nickname"],
-                    }
-                    await ws_to_mm.send(json.dumps(data))
+            # 1. Receive format from client
+            client_msg = await websocket.receive_text()
+            client_data = json.loads(client_msg)
+            game_format = client_data.get("game_format", "blitz")
 
-                    response = await ws_to_mm.recv()
-                    await websocket.send_text(response)
-                    await ws_to_mm.close()
-                    await websocket.close()
-                    break
+            # 2. Proxy to matchmaker
+            data = {
+                "user_id": user["id"],
+                "elo": user["elo_rating"],
+                "nickname": user["nickname"],
+                "game_format": game_format,
+            }
+            await ws_to_mm.send(json.dumps(data))
 
-                except websockets.ConnectionClosed:
-                    await websocket.close()
-                    break
-                except WebSocketDisconnect:
-                    await ws_to_mm.close()
-                    break
+            # 3. Wait for match and relay back
+            response = await ws_to_mm.recv()
+            await websocket.send_text(response)
+            await ws_to_mm.close()
+            await websocket.close()
 
     except Exception as e:
         print(f"Websocket proxy error: {e}")
