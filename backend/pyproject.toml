@@ -11,5 +11,6 @@ dependencies = [
     "fastapi-users[sqlalchemy]>=14.0.1",
     "fastapi[standard]>=0.117.1",
     "psycopg2-binary>=2.9.10",
+    "pymongo[srv]>=4.16.0",
     "redis>=6.4.0",
 ]
