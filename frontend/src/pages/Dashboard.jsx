@@ -7,50 +7,54 @@ import ProfileInfo from "../components/ProfileInfo";
 
 function GameHistoryTable({ games }) {
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-800">Recent Games</h2>
+    <div className="bg-[#262421] rounded border border-[#403d39] overflow-hidden shadow-xl">
+      <div className="px-6 py-4 border-b border-[#403d39] flex justify-between items-center">
+        <h2 className="text-xl font-bold text-white">Recent Games</h2>
       </div>
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Players</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Format</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Result</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {games.length === 0 ? (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-[#403d39]">
+          <thead className="bg-[#21201d]">
             <tr>
-              <td colSpan="5" className="px-6 py-4 text-center text-gray-500">No games found</td>
+              <th className="px-6 py-3 text-left text-xs font-bold text-[#bababa] uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-[#bababa] uppercase tracking-wider">Players</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-[#bababa] uppercase tracking-wider">Format</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-[#bababa] uppercase tracking-wider">Result</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-[#bababa] uppercase tracking-wider">Action</th>
             </tr>
-          ) : (
-            games.map((game) => (
-              <tr key={game.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(game.created_at).toLocaleDateString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {game.white_nickname} vs {game.black_nickname}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
-                  {game.format}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {game.status === "finished" ? (game.winner_id ? "Decisive" : "Draw") : game.status}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button disabled className="text-gray-400 cursor-not-allowed font-semibold">
-                    Analyze
-                  </button>
-                </td>
+          </thead>
+          <tbody className="bg-[#262421] divide-y divide-[#403d39]">
+            {games.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="px-6 py-10 text-center text-[#bababa]">No games found</td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              games.map((game) => (
+                <tr key={game.id} className="hover:bg-[#3c3934] transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#bababa]">
+                    {new Date(game.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-white">
+                    {game.white_nickname} <span className="text-[#bababa] font-normal">vs</span> {game.black_nickname}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#bababa] capitalize">
+                    {game.format}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${game.status === "finished" ? "text-[#81b64c]" : "text-[#bababa]"}`}>
+                      {game.status === "finished" ? (game.winner_id ? "Decisive" : "Draw") : game.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button disabled className="text-[#bababa] opacity-50 cursor-not-allowed font-semibold hover:text-white">
+                      Analyze
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -58,7 +62,6 @@ function GameHistoryTable({ games }) {
 export default function Dashboard() {
   const token = useUserStore((state) => state.token)
   const setUserStore = useUserStore((state) => state.setUser);
-  const clearUser = useUserStore((state) => state.clearUser);
   const [user, setUser] = useState(null);
   const [lastGames, setLastGames] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -70,12 +73,14 @@ export default function Dashboard() {
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      navigate("/");
+      return;
+    }
 
     async function fetchData() {
       setLoading(true);
       try {
-        // Fetch user profile
         const userRes = await fetch(`${API_URL}/users/me`, {
           headers: {
               "Authorization": `Bearer ${token}`,
@@ -86,7 +91,6 @@ export default function Dashboard() {
         setUser(userData);
         setUserStore(userData);
 
-        // Fetch last games
         const gamesRes = await fetch(`${API_URL}/players/history`, {
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -96,7 +100,6 @@ export default function Dashboard() {
         const gamesData = await gamesRes.json();
         setLastGames(gamesData);
 
-        // Fetch leaderboard
         const leaderboardRes = await fetch(`${API_URL}/players/leaderboard`, {
           headers: {
               "Authorization": `Bearer ${token}`,
@@ -113,12 +116,7 @@ export default function Dashboard() {
     }
 
     fetchData();
-  }, [token, API_URL]);
-
-  const handleLogout = () => {
-    clearUser();
-    navigate("/");
-  };
+  }, [token, API_URL, setUserStore]);
 
   const startNewGame = async () => {
       setMatchmaking(true);
@@ -129,14 +127,11 @@ export default function Dashboard() {
         setSocket(newSocket);
 
         newSocket.onopen = () => {
-          console.log("Connected to matchmaker via WebSocket");
           newSocket.send(JSON.stringify({ game_format: gameFormat }));
         };
 
         newSocket.onmessage = (event) => {
           const data = JSON.parse(event.data);
-          console.log("Message from server:", data);
-
           if (data.event === "match_found") {
             const gameId = data.game_id;
             if (!gameId) throw new Error("No game ID returned");
@@ -153,7 +148,6 @@ export default function Dashboard() {
     };
 
     newSocket.onclose = () => {
-      console.log("Disconnected from matchmaker");
       setMatchmaking(false);
     };
   } catch (err) {
@@ -172,74 +166,78 @@ const cancelMatchmaking = () => {
 
   if (!token) {
     return (
-      <div className="text-center mt-20 text-red-600 font-semibold">
+      <div className="text-center mt-20 text-red-500 font-bold bg-[#262421] p-8 max-w-md mx-auto rounded border border-[#403d39]">
         You must be logged in to view the dashboard.
       </div>
     );
   }
 
   if (loading) {
-    return <div className="text-center mt-20">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center mt-40">
+        <div className="w-12 h-12 border-4 border-[#81b64c] border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div className="text-white font-bold">Loading your dashboard...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 relative">
+    <div className="min-h-[calc(100vh-3.5rem)] bg-[#302e2b] p-6">
       {/* Matchmaking Overlay */}
       {matchmaking && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-70 text-white">
-          <div className="w-16 h-16 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <h2 className="text-2xl font-bold mb-2">Finding a match...</h2>
-          <p className="text-gray-300 mb-6 capitalize">{gameFormat} mode</p>
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white">
+          <div className="w-20 h-20 border-4 border-[#81b64c] border-t-transparent rounded-full animate-spin mb-6"></div>
+          <h2 className="text-3xl font-bold mb-2">Finding a match...</h2>
+          <p className="text-[#bababa] mb-8 capitalize text-lg">{gameFormat} mode</p>
           <button
             onClick={cancelMatchmaking}
-            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors"
+            className="px-8 py-3 bg-[#262421] hover:bg-[#3c3934] border border-[#403d39] rounded font-bold transition-all"
           >
             Cancel
           </button>
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-8">
         {/* Top section: Profile + Start Game */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-[#262421] p-6 rounded border border-[#403d39] shadow-lg">
           {user && <ProfileInfo user={user} />}
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate("/statistics")}
-              className="rounded-lg bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
-            >
-              Statistics
-            </button>
-            <button
-              onClick={handleLogout}
-              className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-            >
-              Logout
-            </button>
-            <select
-              value={gameFormat}
-              onChange={(e) => setGameFormat(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 bg-white"
-            >
-              <option value="bullet">Bullet (1+1)</option>
-              <option value="blitz">Blitz (3+2)</option>
-              <option value="rapid">Rapid (10+0)</option>
-            </select>
+          
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+            <div className="flex flex-col space-y-1 min-w-[150px]">
+              <label className="text-xs font-bold text-[#bababa] uppercase">Time Control</label>
+              <select
+                value={gameFormat}
+                onChange={(e) => setGameFormat(e.target.value)}
+                className="rounded bg-[#302e2b] border-[#403d39] px-4 py-2.5 text-white font-semibold focus:outline-none focus:ring-2 focus:ring-[#81b64c]"
+              >
+                <option value="bullet">Bullet (1+1)</option>
+                <option value="blitz">Blitz (3+2)</option>
+                <option value="rapid">Rapid (10+0)</option>
+              </select>
+            </div>
+            
             <button
                 onClick={startNewGame}
                 disabled={loading}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+                className="h-[46px] mt-5 md:mt-5 px-8 bg-[#81b64c] text-white font-black text-lg rounded hover:bg-[#a3d160] transition-all shadow-[0_0.25rem_0_#537131] active:translate-y-1 active:shadow-none flex-grow md:flex-grow-0"
               >
-                {loading ? "Loading..." : "Start New Game"}
+                PLAY
             </button>
           </div>
         </div>
 
-        {/* Last Games */}
-        <GameHistoryTable games={lastGames} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Last Games */}
+          <div className="lg:col-span-2">
+            <GameHistoryTable games={lastGames} />
+          </div>
 
-        {/* Leaderboard */}
-        <Leaderboard players={leaderboard} />
+          {/* Leaderboard */}
+          <div className="lg:col-span-1">
+            <Leaderboard players={leaderboard} />
+          </div>
+        </div>
       </div>
     </div>
   );

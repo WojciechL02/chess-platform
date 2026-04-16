@@ -32,15 +32,10 @@ export default function Register() {
 
       if (!res.ok) {
         const errData = await res.json();
-        // fastapi-users often returns errors in a specific format
         const errorMsg = errData.detail || errData.message || "Registration failed";
         throw new Error(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
       }
 
-      // Automatically login after registration if desired, 
-      // but usually register only returns user data.
-      // Let's try to login automatically.
-      
       const formData = new URLSearchParams();
       formData.append("username", form.email);
       formData.append("password", form.password);
@@ -67,52 +62,81 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
-        <h1 className="mb-6 text-2xl font-bold text-center">Sign Up</h1>
-        {error && <p className="mb-4 text-center text-sm text-red-600">{error}</p>}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="nickname"
-            placeholder="Nickname"
-            value={form.nickname}
-            onChange={handleChange}
-            required
-            className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className="w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 py-2 font-semibold text-white hover:bg-blue-700 disabled:bg-blue-300"
+    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-4">
+      <div className="w-full max-w-sm flex flex-col items-center">
+        {/* Logo and Brand */}
+        <div className="mb-8 flex flex-col items-center">
+          <svg
+            viewBox="0 0 100 100"
+            className="w-16 h-16 fill-[#81b64c] mb-2"
           >
-            {loading ? "Registering..." : "Sign Up"}
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <Link to="/" className="text-blue-600 hover:underline">
-            Login
-          </Link>
-        </p>
+            <path d="M80,85H20c-2.8,0-5-2.2-5-5v-5h70v5C85,82.8,82.8,85,80,85z M75,70H25V55c0-13.8,11.2-25,25-25s25,11.2,25,25V70z M50,15 c5.5,0,10,4.5,10,10s-4.5,10-10,10s-10-4.5-10-10S44.5,15,50,15z" />
+          </svg>
+          <h1 className="text-3xl font-bold tracking-tight text-white">ChessPlatform</h1>
+        </div>
+
+        <div className="w-full rounded-md bg-[#262421] p-8 shadow-2xl border border-[#403d39]">
+          <h2 className="mb-6 text-xl font-bold text-center text-white">Create Account</h2>
+          
+          {error && (
+            <div className="mb-4 rounded bg-red-500/10 border border-red-500/50 p-3 text-sm text-red-500 text-center">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                name="nickname"
+                placeholder="Nickname"
+                value={form.nickname}
+                onChange={handleChange}
+                required
+                className="w-full rounded bg-[#302e2b] border-[#403d39] px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#81b64c] transition-all"
+              />
+            </div>
+            <div>
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                className="w-full rounded bg-[#302e2b] border-[#403d39] px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#81b64c] transition-all"
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                name="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={handleChange}
+                required
+                className="w-full rounded bg-[#302e2b] border-[#403d39] px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#81b64c] transition-all"
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded bg-[#81b64c] py-3 font-bold text-white hover:bg-[#a3d160] transition-colors shadow-[0_0.25rem_0_#537131] active:translate-y-1 active:shadow-none"
+            >
+              {loading ? "Registering..." : "Sign Up"}
+            </button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-[#403d39] text-center">
+            <p className="text-sm text-[#bababa]">
+              Already have an account?{" "}
+              <Link to="/" className="text-[#81b64c] font-bold hover:underline">
+                Log In
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

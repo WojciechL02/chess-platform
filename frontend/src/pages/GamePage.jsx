@@ -6,15 +6,24 @@ import { Chess } from "chess.js";
 
 function GameOverModal({ winnerName, onGoToDashboard }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white p-8 rounded-lg shadow-xl text-center">
-        <h2 className="text-3xl font-bold mb-4">Game Over</h2>
-        <p className="text-xl mb-6">
-          {winnerName ? `Winner: ${winnerName}` : "It's a draw!"}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-[#262421] p-10 rounded border border-[#403d39] shadow-2xl text-center max-w-sm w-full">
+        <div className="mb-6 flex justify-center">
+            <svg viewBox="0 0 24 24" className="w-20 h-20 text-[#81b64c]" fill="currentColor">
+                <path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.49 1.5 1.74 2.65 3.3 2.94L11 18H9v2h6v-2h-2l.31-4.12c1.56-.29 2.81-1.44 3.3-2.94C19.08 10.63 21 8.55 21 8V7c0-1.1-.9-2-2-2zm-2 5.82V7h2v1c0 .5-.13 1-.36 1.45-.18.33-.4.63-.64.37zM5 8V7h2v3.82c-.24.26-.46-.04-.64-.37C4.13 10 4 9.5 4 9V8z"/>
+            </svg>
+        </div>
+        <h2 className="text-4xl font-black text-white mb-2 italic">GAME OVER</h2>
+        <p className="text-xl text-[#bababa] mb-8 font-semibold">
+          {winnerName ? (
+            <span><span className="text-[#81b64c] font-black uppercase">{winnerName}</span> WON</span>
+          ) : (
+            "IT'S A DRAW"
+          )}
         </p>
         <button
           onClick={onGoToDashboard}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+          className="w-full bg-[#81b64c] text-white px-6 py-4 rounded font-black text-xl hover:bg-[#a3d160] transition-all shadow-[0_0.25rem_0_#537131] active:translate-y-1 active:shadow-none"
         >
           Go to Dashboard
         </button>
@@ -47,18 +56,15 @@ export default function GamePage() {
     ? (match?.players?.black_nickname || "Opponent") 
     : (match?.players?.white_nickname || "Opponent");
 
-  // chess.js instance
   const chessGameRef = useRef(new Chess());
   const chessGame = chessGameRef.current;
   const [chessPosition, setChessPosition] = useState(chessGame.fen());
-  const [moves, setMoves] = useState([]); // each element: {san, player}
+  const [moves, setMoves] = useState([]); 
 
-    // timer
     const [myTime, setMyTime] = useState(180);
     const [opponentTime, setOpponentTime] = useState(180);
     const [activeColor, setActiveColor] = useState("w");
 
-  // WebSocket connection
   useEffect(() => {
     const wsUrl = `${API_URL}/game/${gameId}?token=${token}`;
     const ws = new WebSocket(wsUrl);
@@ -69,8 +75,6 @@ export default function GamePage() {
 
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
-      console.log("WS message:", msg);
-
       if (msg.event === "sync") {
         chessGame.load(msg.fen);
         setChessPosition(msg.fen);
@@ -93,14 +97,12 @@ export default function GamePage() {
         const to = uci.slice(2, 4);
         const promotion = uci.length === 5 ? uci[4] : undefined;
 
-        // If it's not our move, update the board
         if (msg.user_id !== userId) {
           chessGame.move({ from: from, to: to, promotion: promotion });
           setChessPosition(chessGame.fen());
           setMoves((prev) => [...prev, { san: uci, player: "Opponent" }]);
         }
 
-        // Synchronize timers from server
         const currentWhiteId = whiteId || msg.white_id || match?.players?.white;
         if (userId === currentWhiteId) {
           setMyTime(msg.white_time);
@@ -109,8 +111,6 @@ export default function GamePage() {
           setMyTime(msg.black_time);
           setOpponentTime(msg.white_time);
         }
-
-        // Update active player color ('w' or 'b')
         setActiveColor(msg.turn === currentWhiteId ? "w" : "b");
       }
 
@@ -134,7 +134,7 @@ export default function GamePage() {
     return () => {
         ws.close();
     };
-  }, [gameId, token, whiteId]);
+  }, [gameId, token, whiteId, API_URL, chessGame, match?.players?.white, userId]);
 
   useEffect(() => {
       if (!activeColor || gameOver) return;
@@ -145,12 +145,11 @@ export default function GamePage() {
         } else {
           setOpponentTime(prev => Math.max(prev - 1, 0));
         }
-      }, 1000); // every second
+      }, 1000);
 
       return () => clearInterval(interval);
     }, [activeColor, gameOver, playerColor]);
 
-// Handle piece drop
 const onPieceDrop = ({ sourceSquare, targetSquare, promotion }) => {
   if (gameOver) return false;
   try {
@@ -158,7 +157,6 @@ const onPieceDrop = ({ sourceSquare, targetSquare, promotion }) => {
       return false;
     }
 
-    // Only add promotion if needed
     const moveObj = promotion
       ? { from: sourceSquare, to: targetSquare, promotion: promotion }
       : { from: sourceSquare, to: targetSquare };
@@ -167,12 +165,8 @@ const onPieceDrop = ({ sourceSquare, targetSquare, promotion }) => {
     if (move === null) return false;
     
     setChessPosition(chessGame.fen());
-
-    // Send UCI including promotion if exists
     const uci = sourceSquare + targetSquare + (promotion || "");
     setMoves((prev) => [...prev, { san: uci, player: "You" }]);
-
-    // Optimistically switch timer
     setActiveColor(playerColor === "w" ? "b" : "w");
 
     if (socket?.readyState === WebSocket.OPEN) {
@@ -203,10 +197,15 @@ const canDragPieceAll = (piece) => {
     }
   };
 
-  if (loading) return <div className="text-center mt-20">Connecting to game...</div>;
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center mt-40">
+        <div className="w-12 h-12 border-4 border-[#81b64c] border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div className="text-white font-bold">Connecting to game...</div>
+    </div>
+  );
 
   return (
-    <div className="p-6 flex flex-col items-center space-y-6">
+    <div className="min-h-[calc(100vh-3.5rem)] bg-[#302e2b] p-6 flex flex-col items-center">
       {gameOver && (
         <GameOverModal 
           winnerName={gameResult.winnerName} 
@@ -214,52 +213,97 @@ const canDragPieceAll = (piece) => {
         />
       )}
 
-      <h1 className="text-2xl font-bold">Game {gameId}</h1>
+      <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-4 gap-8">
+        
+        {/* Board Section */}
+        <div className="lg:col-span-3 flex flex-col items-center">
+             {/* Opponent Info */}
+            <div className="w-full max-w-[600px] flex justify-between items-center mb-2 px-2">
+                <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-[#262421] rounded flex items-center justify-center border border-[#403d39]">
+                        <span className="text-xs font-bold text-[#bababa] uppercase">{opponentName.charAt(0)}</span>
+                    </div>
+                    <span className="font-bold text-white">{opponentName}</span>
+                </div>
+                <div className={`px-4 py-1.5 rounded font-mono text-xl font-bold ${activeColor !== playerColor ? "bg-white text-black" : "bg-[#262421] text-[#bababa] border border-[#403d39]"}`}>
+                    {Math.floor(opponentTime / 60)}:{String(Math.floor(opponentTime % 60)).padStart(2, "0")}
+                </div>
+            </div>
 
-      <div className={`text-lg font-bold ${activeColor !== playerColor ? "text-green-600" : ""}`}>
-        Time: {Math.floor(opponentTime / 60)}:{String(Math.floor(opponentTime % 60)).padStart(2, "0")}
-      </div>
-      <div className="text-lg font-semibold text-gray-700">Opponent: {opponentName}</div>
+            {/* Chessboard */}
+            <div className="w-full max-w-[600px] aspect-square shadow-2xl border-4 border-[#262421] rounded overflow-hidden">
+                <Chessboard
+                key={orientation}
+                options={{
+                    canDragPiece: canDragPieceAll,
+                    position: chessPosition,
+                    onPieceDrop,
+                    boardOrientation: orientation,
+                    id: "game-board",
+                }}
+                />
+            </div>
 
-      {/* Flex container for board + moves */}
-      <div className="flex flex-row gap-6">
-        {/* Chessboard */}
-        <Chessboard
-          key={orientation}
-          options={{
-            canDragPiece: canDragPieceAll,
-            position: chessPosition,
-            onPieceDrop,
-            boardOrientation: orientation,
-            id: "game-board",
-          }}
-        />
-
-        {/* Moves list */}
-        <div className="w-48 bg-gray-100 p-4 rounded shadow overflow-y-auto max-h-[400px]">
-          <h3 className="text-lg font-bold mb-2">Moves</h3>
-          <ol className="list-decimal list-inside space-y-1">
-            {moves.map((m, i) => (
-              <li key={i} className={m.player === "You" ? "text-blue-600" : "text-red-600"}>
-                {m.san} <span className="text-gray-500 text-sm">({m.player})</span>
-              </li>
-            ))}
-          </ol>
+            {/* My Info */}
+            <div className="w-full max-w-[600px] flex justify-between items-center mt-2 px-2">
+                <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-[#81b64c] rounded flex items-center justify-center">
+                        <span className="text-xs font-bold text-white uppercase">{nickname?.charAt(0)}</span>
+                    </div>
+                    <span className="font-bold text-white">{nickname} (You)</span>
+                </div>
+                <div className={`px-4 py-1.5 rounded font-mono text-xl font-bold ${activeColor === playerColor ? "bg-white text-black" : "bg-[#262421] text-[#bababa] border border-[#403d39]"}`}>
+                    {Math.floor(myTime / 60)}:{String(Math.floor(myTime % 60)).padStart(2, "0")}
+                </div>
+            </div>
         </div>
-      </div>
 
-      <div className={`text-lg font-bold ${activeColor === playerColor ? "text-green-600" : ""}`}>
-        Time: {Math.floor(myTime / 60)}:{String(Math.floor(myTime % 60)).padStart(2, "0")}
-      </div>
-      <div className="text-lg font-semibold text-gray-700">You: {nickname}</div>
+        {/* Sidebar Info */}
+        <div className="lg:col-span-1 flex flex-col space-y-6">
+            <div className="bg-[#262421] rounded border border-[#403d39] overflow-hidden flex flex-col h-[500px]">
+                <div className="bg-[#21201d] px-4 py-3 border-b border-[#403d39]">
+                    <h3 className="text-sm font-black text-[#bababa] uppercase tracking-widest">Move History</h3>
+                </div>
+                <div className="flex-grow overflow-y-auto p-2">
+                     <div className="grid grid-cols-2 gap-1">
+                        {moves.reduce((acc, move, i) => {
+                            if (i % 2 === 0) acc.push([move]);
+                            else acc[acc.length - 1].push(move);
+                            return acc;
+                        }, []).map((pair, i) => (
+                            <div key={i} className="contents">
+                                <div className="col-span-2 flex items-center space-x-2 py-1 px-2 hover:bg-[#3c3934] rounded group">
+                                    <span className="text-[#bababa] text-xs font-bold w-4">{i + 1}.</span>
+                                    <span className="flex-1 font-semibold text-white">{pair[0].san}</span>
+                                    <span className="flex-1 font-semibold text-white">{pair[1]?.san || ""}</span>
+                                </div>
+                            </div>
+                        ))}
+                     </div>
+                </div>
+                <div className="p-4 bg-[#21201d] border-t border-[#403d39] grid grid-cols-2 gap-3">
+                    <button 
+                        onClick={offerDraw} 
+                        className="bg-[#3c3934] text-[#bababa] text-xs font-bold py-2 rounded hover:text-white hover:bg-[#4a4742] transition-colors"
+                    >
+                        OFFER DRAW
+                    </button>
+                    <button 
+                        onClick={resign} 
+                        className="bg-[#3c3934] text-[#bababa] text-xs font-bold py-2 rounded hover:text-white hover:bg-[#4a4742] transition-colors"
+                    >
+                        RESIGN
+                    </button>
+                </div>
+            </div>
 
-      <div className="flex space-x-4">
-        <button onClick={offerDraw} className="rounded-lg bg-yellow-500 px-4 py-2 text-white hover:bg-yellow-600">
-          Offer Draw
-        </button>
-        <button onClick={resign} className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700">
-          Resign
-        </button>
+            <div className="bg-[#262421] p-4 rounded border border-[#403d39]">
+                <p className="text-[#bababa] text-xs font-semibold leading-relaxed">
+                    Game ID: <span className="text-white font-mono">{gameId}</span><br/>
+                    Format: <span className="text-white capitalize">{match?.format || "Standard"}</span>
+                </p>
+            </div>
+        </div>
       </div>
     </div>
   );
