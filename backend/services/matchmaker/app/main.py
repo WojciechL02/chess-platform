@@ -24,6 +24,11 @@ app = FastAPI(title="Matchmaking service", lifespan=lifespan)
 connections = {}
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @app.websocket("/ws/join")
 async def join_queue(websocket: WebSocket):
     await websocket.accept()

@@ -20,6 +20,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Game Service", lifespan=lifespan)
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @app.websocket("/ws/game/{game_id}/{user_id}")
 async def handle_game(websocket: WebSocket, game_id: str, user_id: str):
     await websocket.accept()
