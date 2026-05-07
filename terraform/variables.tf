@@ -45,9 +45,13 @@ variable "services" {
       port         = 8001
     }
     "matchmaker" = {
+      # Pinned to 1 replica: the matchmaking worker reads/writes a shared Redis
+      # queue and would race with itself if scaled. Connections fan-out is
+      # already correct via Redis pub/sub (see app/main.py:listen_for_matches),
+      # but the worker is not idempotent. Single replica is the simple fix.
       machine_type = "e2-small"
       min_replicas = 1
-      max_replicas = 3
+      max_replicas = 1
       target_cpu   = 0.6
       port         = 8002
     }
