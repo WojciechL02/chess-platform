@@ -20,6 +20,12 @@ variable "domain" {
   description = "Optional domain name for the LB (e.g., chess.example.com). Leave empty to use a managed cert with the LB IP only."
 }
 
+variable "mongo_url" {
+  type        = string
+  sensitive   = true
+  description = "MongoDB Atlas connection string (mongodb+srv://...). Create the cluster in Atlas, then pass via -var or .tfvars."
+}
+
 # Per-service scaling configuration
 variable "services" {
   type = map(object({
