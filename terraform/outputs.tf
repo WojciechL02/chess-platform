@@ -29,3 +29,25 @@ output "redis_host" {
 output "redis_port" {
   value = google_redis_instance.main.port
 }
+
+output "internal_lb_ips" {
+  value = {
+    for k, v in google_compute_address.internal_lb : k => v.address
+  }
+  description = "Internal LB IPs per service (debugging only — these aren't reachable from outside the VPC)."
+}
+
+output "postgres_connection_name" {
+  value       = google_sql_database_instance.postgres.connection_name
+  description = "Pass to cloud-sql-proxy when running alembic migrations from your laptop."
+}
+
+output "db_app_user" {
+  value = google_sql_user.app.name
+}
+
+output "db_app_password" {
+  value     = random_password.db_password.result
+  sensitive = true
+  description = "Run: terraform output -raw db_app_password — use it locally with cloud-sql-proxy + alembic."
+}
