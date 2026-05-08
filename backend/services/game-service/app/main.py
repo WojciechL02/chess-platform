@@ -27,23 +27,20 @@ async def handle_game(websocket: WebSocket, game_id: str, user_id: str):
     m = websocket.app.state.mongo
 
     await ensure_game_state_exists(r, game_id)
-    
-    # Send current state for synchronization
     state = await r.hgetall(f"game_state_{game_id}")
     if state:
         await websocket.send_text(json.dumps({
             "event": "sync",
             "fen": state.get("fen"),
             "turn": state.get("turn"),
-            "white_time": float(state.get("white_time", 180.0)),
-            "black_time": float(state.get("black_time", 180.0)),
+            "white_time": float(state.get("white_time")),
+            "black_time": float(state.get("black_time")),
             "white_id": state.get("white_id"),
             "black_id": state.get("black_id"),
         }))
 
     pubsub = r.pubsub()
     await pubsub.subscribe(f"game:{game_id}")
-    print(f"{user_id} SUBSCRIBED\n")
 
     async def ws_receiver():
         try:
@@ -53,8 +50,7 @@ async def handle_game(websocket: WebSocket, game_id: str, user_id: str):
                 event = data.get("event")
 
                 if event in EVENT_HANDLERS:
-                    response = await EVENT_HANDLERS[event](r, m, game_id, user_id, data)
-                    # await websocket.send_text(json.dumps(response))
+                    await EVENT_HANDLERS[event](r, m, game_id, user_id, data)
                 else:
                     await websocket.send_text(json.dumps({"error": "Unknown event"}))
         except WebSocketDisconnect:
@@ -66,12 +62,9 @@ async def handle_game(websocket: WebSocket, game_id: str, user_id: str):
                 async for msg in pubsub.listen():
                     if msg["type"] == "message":
                         payload = json.loads(msg["data"])
-                        # Send all messages to the client, including their own moves,
-                        # to ensure authoritative state (like timers) is synchronized.
                         await websocket.send_text(json.dumps(payload))
         finally:
             await pubsub.unsubscribe(f"game:{game_id}")
             await pubsub.close()
 
-    # Run both tasks concurrently
     await asyncio.gather(ws_receiver(), pubsub_receiver())
