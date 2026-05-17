@@ -4,7 +4,7 @@ import { Chessboard } from "react-chessboard";
 import { useUserStore } from "../store/UserStore";
 import { Chess } from "chess.js";
 
-function GameOverModal({ winnerName, onGoToDashboard }) {
+function GameOverModal({ winnerName, onGoToDashboard, onAnalyze }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-[#262421] p-10 rounded border border-[#403d39] shadow-2xl text-center max-w-sm w-full">
@@ -22,8 +22,14 @@ function GameOverModal({ winnerName, onGoToDashboard }) {
           )}
         </p>
         <button
+          onClick={onAnalyze}
+          className="w-full bg-[#81b64c] text-white px-6 py-4 rounded font-black text-xl hover:bg-[#a3d160] transition-all shadow-[0_0.25rem_0_#537131] active:translate-y-1 active:shadow-none mb-3"
+        >
+          Analyze Game
+        </button>
+        <button
           onClick={onGoToDashboard}
-          className="w-full bg-[#81b64c] text-white px-6 py-4 rounded font-black text-xl hover:bg-[#a3d160] transition-all shadow-[0_0.25rem_0_#537131] active:translate-y-1 active:shadow-none"
+          className="w-full bg-[#3c3934] text-[#bababa] px-6 py-3 rounded font-bold hover:text-white hover:bg-[#4a4742] transition-colors"
         >
           Go to Dashboard
         </button>
@@ -207,9 +213,10 @@ const canDragPieceAll = (piece) => {
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-[#302e2b] p-6 flex flex-col items-center">
       {gameOver && (
-        <GameOverModal 
-          winnerName={gameResult.winnerName} 
-          onGoToDashboard={() => navigate("/dashboard")} 
+        <GameOverModal
+          winnerName={gameResult.winnerName}
+          onGoToDashboard={() => navigate("/dashboard")}
+          onAnalyze={() => navigate(`/analysis/${gameId}`)}
         />
       )}
 

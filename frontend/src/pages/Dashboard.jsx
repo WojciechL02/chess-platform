@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useUserStore } from "../store/UserStore";
 import Leaderboard from "../components/Leaderboard";
@@ -45,9 +45,18 @@ function GameHistoryTable({ games }) {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button disabled className="text-[#bababa] opacity-50 cursor-not-allowed font-semibold hover:text-white">
-                      Analyze
-                    </button>
+                    {game.status === "finished" ? (
+                      <Link
+                        to={`/analysis/${game.id}`}
+                        className="text-[#81b64c] font-semibold hover:text-[#a3d160]"
+                      >
+                        Analyze
+                      </Link>
+                    ) : (
+                      <span className="text-[#bababa] opacity-50 cursor-not-allowed font-semibold">
+                        Analyze
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))
