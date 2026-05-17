@@ -10,7 +10,7 @@ import Navbar from "./components/Navbar";
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-[#302e2b] text-white">
+      <div className="min-h-screen" style={{ backgroundColor: "var(--bg)", color: "var(--ink)" }}>
         <Navbar />
         <main className="pt-14">
           <Routes>
