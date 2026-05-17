@@ -122,7 +122,7 @@ export default function Dashboard() {
       setMatchmaking(true);
 
       try {
-        const wsUrl = `${API_URL}/match/join?token=${token}`;
+        const wsUrl = `${API_URL.replace("http", "ws")}/match/join?token=${token}`;
         const newSocket = new WebSocket(wsUrl);
         setSocket(newSocket);
 

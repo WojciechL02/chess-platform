@@ -16,27 +16,23 @@ router = APIRouter(prefix="/match", tags=["matchmaking"])
 
 
 @router.websocket("/join")
-async def join_match(websocket: WebSocket, user=Depends(authenticate_user_ws)):
+async def join_match(websocket: WebSocket):
+    # Extract token from gateway request
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4401)
+        return
+
     await websocket.accept()
 
-    ws_url = MATCHMAKING_SERVICE_URL.replace("http", "ws") + "/ws/join"
+    ws_url = MATCHMAKING_SERVICE_URL.replace("http", "ws") + f"/ws/join?token={token}"
     try:
         async with websockets.connect(ws_url) as ws_to_mm:
-            # 1. Receive format from client
+            # 1. Forward the first message (containing game_format)
             client_msg = await websocket.receive_text()
-            client_data = json.loads(client_msg)
-            game_format = client_data.get("game_format", "blitz")
+            await ws_to_mm.send(client_msg)
 
-            # 2. Proxy to matchmaker
-            data = {
-                "user_id": user["id"],
-                "elo": user["elo_rating"],
-                "nickname": user["nickname"],
-                "game_format": game_format,
-            }
-            await ws_to_mm.send(json.dumps(data))
-
-            # 3. Wait for match and relay back
+            # 2. Wait for match and relay back
             response = await ws_to_mm.recv()
             await websocket.send_text(response)
             await ws_to_mm.close()

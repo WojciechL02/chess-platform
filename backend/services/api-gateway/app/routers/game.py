@@ -16,10 +16,17 @@ router = APIRouter(prefix="/game", tags=["game"])
 
 
 @router.websocket("/{game_id}")
-async def join_match(websocket: WebSocket, game_id: str, user=Depends(authenticate_user_ws)):
+async def join_match(websocket: WebSocket, game_id: str):
+    # Extract token from gateway request
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=4401)
+        return
+
     await websocket.accept()
 
-    ws_url = GAME_SERVICE_URL.replace("http", "ws") + f"/ws/game/{game_id}/{user["id"]}"
+    # Proxy to game-service, passing the token along
+    ws_url = GAME_SERVICE_URL.replace("http", "ws") + f"/ws/game/{game_id}?token={token}"
     try:
         async with websockets.connect(ws_url) as ws_to_game:
             async def forward_from_client():

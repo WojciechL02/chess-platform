@@ -14,6 +14,20 @@ uv sync
    8 npm install
 ```
 
+### Deploy:
+```bash
+docker compose down
+docker compose up --build
+./docker-push.sh
+```
+other:
+```bash
+gcloud services enable run.googleapis.com compute.googleapis.com artifactregistry.googleapis.com
+gcloud artifacts repositories create chess-platform-repo --repository-format=docker --location=europe-north2 --description="Docker repository for Chess Platform" --project=chess-platform-496620
+gcloud auth configure-docker europe-north2-docker.pkg.dev
+
+```
+
 ## How to run:
 ### Backend:
 Each of these in new terminal:

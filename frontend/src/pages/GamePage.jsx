@@ -66,7 +66,7 @@ export default function GamePage() {
     const [activeColor, setActiveColor] = useState("w");
 
   useEffect(() => {
-    const wsUrl = `${API_URL}/game/${gameId}?token=${token}`;
+    const wsUrl = `${API_URL.replace("http", "ws")}/game/${gameId}?token=${token}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
