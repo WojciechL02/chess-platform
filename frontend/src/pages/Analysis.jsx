@@ -8,6 +8,7 @@ import {
   Line,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
   ReferenceLine,
 } from "recharts";
@@ -15,19 +16,16 @@ import { useUserStore } from "../store/UserStore";
 
 
 const CLASSIFICATION_STYLE = {
-  best:       { color: "#81b64c", label: "Best" },
-  excellent:  { color: "#9eb868", label: "Excellent" },
-  good:       { color: "#bababa", label: "Good" },
-  inaccuracy: { color: "#e8a23b", label: "Inaccuracy" },
-  mistake:    { color: "#d97757", label: "Mistake" },
-  blunder:    { color: "#ca3431", label: "Blunder" },
+  best:       { color: "#3d6b3a", label: "Best" },
+  excellent:  { color: "#6b8a3d", label: "Excellent" },
+  good:       { color: "#3d3833", label: "Good" },
+  inaccuracy: { color: "#b58a3a", label: "Inaccuracy" },
+  mistake:    { color: "#c2693d", label: "Mistake" },
+  blunder:    { color: "#a73a2a", label: "Blunder" },
 };
-
-const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 
 function fenAfter(moves, index) {
-  // index = -1 means starting position; otherwise replay 0..index inclusive.
   const chess = new Chess();
   for (let i = 0; i <= index && i < moves.length; i++) {
     const uci = moves[i].uci;
@@ -42,8 +40,6 @@ function fenAfter(moves, index) {
 
 
 function evalFromWhitePov(move) {
-  // Service returns eval_after in centipawns from the mover's POV.
-  // For a single White-POV time series we negate when Black moved.
   const cp = move.eval_after;
   return move.player_color === "white" ? cp : -cp;
 }
@@ -60,20 +56,32 @@ function formatEval(cp) {
 function SummaryColumn({ color, stats }) {
   const order = ["best", "excellent", "good", "inaccuracy", "mistake", "blunder"];
   return (
-    <div className="flex-1 bg-[#262421] rounded border border-[#403d39] p-4">
-      <div className="flex justify-between items-baseline mb-3">
-        <h3 className="text-sm font-black uppercase tracking-wider text-white">{color}</h3>
-        <span className="text-xs text-[#bababa] font-semibold">
-          avg loss <span className="text-white">{stats.avg_centipawn_loss}cp</span>
-        </span>
+    <div className="ed-card flex-1 p-5">
+      <div className="flex justify-between items-baseline mb-4">
+        <div>
+          <div className="ed-eyebrow mb-1">Side</div>
+          <h3 className="serif text-xl" style={{ color: "var(--ink)" }}>{color}</h3>
+        </div>
+        <div className="text-right">
+          <div className="ed-eyebrow mb-1">Avg loss</div>
+          <span
+            className="text-base"
+            style={{ color: "var(--ink)", fontFamily: "var(--font-mono)", fontWeight: 600 }}
+          >
+            {stats.avg_centipawn_loss}cp
+          </span>
+        </div>
       </div>
-      <div className="space-y-1">
+      <hr className="ed-rule mb-3" />
+      <div className="space-y-1.5">
         {order.map((key) => (
-          <div key={key} className="flex justify-between items-center text-xs">
-            <span style={{ color: CLASSIFICATION_STYLE[key].color }} className="font-bold">
+          <div key={key} className="flex justify-between items-center text-sm">
+            <span style={{ color: CLASSIFICATION_STYLE[key].color, fontWeight: 500 }}>
               {CLASSIFICATION_STYLE[key].label}
             </span>
-            <span className="text-[#bababa] font-mono">{stats[key]}</span>
+            <span style={{ color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+              {stats[key]}
+            </span>
           </div>
         ))}
       </div>
@@ -91,7 +99,7 @@ export default function Analysis() {
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(-1); // -1 = starting position
+  const [currentIndex, setCurrentIndex] = useState(-1);
 
   useEffect(() => {
     if (!token) {
@@ -140,20 +148,27 @@ export default function Analysis() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center mt-40">
-        <div className="w-12 h-12 border-4 border-[#81b64c] border-t-transparent rounded-full animate-spin mb-4"></div>
-        <div className="text-white font-bold">Analyzing your game…</div>
-        <div className="text-[#bababa] text-sm mt-1">First run takes 10–30 seconds, then cached.</div>
+        <div className="ed-eyebrow mb-3">Working</div>
+        <h2 className="serif text-3xl mb-2" style={{ color: "var(--ink)" }}>
+          Analyzing your game
+        </h2>
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          First run takes 10–30 seconds. Cached afterwards.
+        </p>
       </div>
     );
   }
 
   if (error || !analysis) {
     return (
-      <div className="text-center mt-20 text-red-400 font-bold bg-[#262421] p-8 max-w-md mx-auto rounded border border-[#403d39]">
-        {error || "No analysis available"}
+      <div className="ed-card text-center mt-20 p-8 max-w-md mx-auto">
+        <div className="ed-eyebrow mb-2">Something went wrong</div>
+        <p className="mb-4" style={{ color: "var(--negative)" }}>
+          {error || "No analysis available"}
+        </p>
         <button
           onClick={() => navigate("/dashboard")}
-          className="mt-4 block mx-auto text-sm text-[#bababa] underline"
+          className="ed-btn"
         >
           Back to dashboard
         </button>
@@ -165,13 +180,19 @@ export default function Analysis() {
   const currentMove = currentIndex >= 0 ? moves[currentIndex] : null;
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-[#302e2b] p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-black text-white">Game Review</h1>
+    <div className="min-h-[calc(100vh-3.5rem)] p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        <div className="flex justify-between items-end pb-2" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div>
+            <div className="ed-eyebrow mb-1">Review</div>
+            <h1 className="serif text-3xl" style={{ color: "var(--ink)" }}>
+              Game analysis
+            </h1>
+          </div>
           <button
             onClick={() => navigate("/dashboard")}
-            className="text-sm text-[#bababa] hover:text-white font-semibold"
+            className="text-sm"
+            style={{ color: "var(--muted)", fontWeight: 500 }}
           >
             ← Back to dashboard
           </button>
@@ -185,7 +206,10 @@ export default function Analysis() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Board + eval graph */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="aspect-square max-w-[600px] mx-auto shadow-2xl border-4 border-[#262421] rounded overflow-hidden">
+            <div
+              className="aspect-square max-w-[600px] mx-auto overflow-hidden"
+              style={{ border: "1px solid var(--border)", borderRadius: 2 }}
+            >
               <Chessboard
                 options={{
                   position: fen,
@@ -195,76 +219,71 @@ export default function Analysis() {
               />
             </div>
 
-            <div className="flex justify-center items-center gap-3">
-              <button
-                onClick={() => goToMove(-1)}
-                className="px-3 py-1.5 bg-[#262421] border border-[#403d39] rounded text-sm font-bold hover:bg-[#3c3934]"
-              >⏮</button>
-              <button
-                onClick={prev}
-                disabled={currentIndex < 0}
-                className="px-3 py-1.5 bg-[#262421] border border-[#403d39] rounded text-sm font-bold hover:bg-[#3c3934] disabled:opacity-40"
-              >◀</button>
-              <span className="text-[#bababa] font-mono text-sm min-w-[120px] text-center">
+            <div className="flex justify-center items-center gap-2">
+              <button onClick={() => goToMove(-1)} className="ed-btn">⏮</button>
+              <button onClick={prev} disabled={currentIndex < 0} className="ed-btn">◀</button>
+              <span
+                className="min-w-[140px] text-center text-sm"
+                style={{ color: "var(--muted)", fontFamily: "var(--font-mono)" }}
+              >
                 {currentIndex < 0
                   ? "Start"
                   : `Move ${currentIndex + 1} / ${moves.length}`}
               </span>
-              <button
-                onClick={next}
-                disabled={currentIndex >= moves.length - 1}
-                className="px-3 py-1.5 bg-[#262421] border border-[#403d39] rounded text-sm font-bold hover:bg-[#3c3934] disabled:opacity-40"
-              >▶</button>
-              <button
-                onClick={() => goToMove(moves.length - 1)}
-                className="px-3 py-1.5 bg-[#262421] border border-[#403d39] rounded text-sm font-bold hover:bg-[#3c3934]"
-              >⏭</button>
+              <button onClick={next} disabled={currentIndex >= moves.length - 1} className="ed-btn">▶</button>
+              <button onClick={() => goToMove(moves.length - 1)} className="ed-btn">⏭</button>
             </div>
 
             {currentMove && (
-              <div className="bg-[#262421] rounded border border-[#403d39] p-4">
+              <div className="ed-card p-4">
                 <div className="flex justify-between items-baseline">
                   <div>
                     <span
-                      className="font-black text-lg"
+                      className="serif text-2xl"
                       style={{ color: CLASSIFICATION_STYLE[currentMove.classification].color }}
                     >
                       {currentMove.san}
                     </span>
-                    <span className="ml-2 text-sm text-[#bababa]">
+                    <span className="ml-3 text-sm" style={{ color: "var(--ink-soft)" }}>
                       {CLASSIFICATION_STYLE[currentMove.classification].label}
                       {currentMove.centipawn_loss > 0 && ` (−${currentMove.centipawn_loss}cp)`}
                     </span>
                   </div>
-                  <div className="text-sm text-[#bababa]">
-                    Best: <span className="text-white font-semibold">{currentMove.best_move_san}</span>
+                  <div className="text-sm text-right">
+                    <div className="ed-eyebrow mb-0.5">Engine prefers</div>
+                    <span style={{ color: "var(--ink)", fontWeight: 600 }}>
+                      {currentMove.best_move_san}
+                    </span>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="bg-[#262421] rounded border border-[#403d39] p-4">
-              <h3 className="text-sm font-black text-white uppercase tracking-wider mb-2">
+            <div className="ed-card p-5">
+              <h3 className="serif text-lg mb-3" style={{ color: "var(--ink)" }}>
                 Evaluation
               </h3>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 5, right: 15, bottom: 20, left: 5 }}>
+                    <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="#d9d0c1" />
                     <XAxis
                       dataKey="ply"
-                      stroke="#bababa"
-                      tick={{ fontSize: 10 }}
+                      tick={{ fill: "#6b6359", fontSize: 11 }}
+                      axisLine={{ stroke: "#d9d0c1" }}
+                      tickLine={{ stroke: "#d9d0c1" }}
                       label={{
                         value: "Ply (half-move)",
                         position: "insideBottom",
                         offset: -10,
-                        fill: "#bababa",
+                        fill: "#6b6359",
                         fontSize: 11,
                       }}
                     />
                     <YAxis
-                      stroke="#bababa"
-                      tick={{ fontSize: 10 }}
+                      tick={{ fill: "#6b6359", fontSize: 11 }}
+                      axisLine={{ stroke: "#d9d0c1" }}
+                      tickLine={{ stroke: "#d9d0c1" }}
                       domain={[-1000, 1000]}
                       tickFormatter={(v) => (v / 100).toFixed(0)}
                       label={{
@@ -272,18 +291,35 @@ export default function Analysis() {
                         angle: -90,
                         position: "insideLeft",
                         offset: 15,
-                        style: { textAnchor: "middle", fill: "#bababa", fontSize: 11 },
+                        style: { textAnchor: "middle", fill: "#6b6359", fontSize: 11 },
                       }}
                     />
                     <Tooltip
-                      contentStyle={{ background: "#21201d", border: "1px solid #403d39" }}
-                      labelStyle={{ color: "#bababa" }}
+                      contentStyle={{
+                        backgroundColor: "#fbf8f3",
+                        border: "1px solid #1a1a1a",
+                        borderRadius: 2,
+                        fontFamily: "Inter",
+                      }}
+                      itemStyle={{ color: "#8b2635", fontWeight: 600 }}
+                      labelStyle={{ color: "#6b6359", marginBottom: 4, fontSize: 11 }}
                       formatter={(value) => [formatEval(value), "Eval"]}
                       labelFormatter={(ply) => chartData[ply]?.label || "Start"}
                     />
-                    <ReferenceLine y={0} stroke="#403d39" label={{ value: "equal", position: "right", fill: "#7a7670", fontSize: 9 }} />
-                    <ReferenceLine x={currentIndex + 1} stroke="#81b64c" strokeDasharray="3 3" label={{ value: "current", position: "top", fill: "#81b64c", fontSize: 9 }} />
-                    <Line type="monotone" dataKey="eval" stroke="#81b64c" dot={false} strokeWidth={2} />
+                    <ReferenceLine y={0} stroke="#1a1a1a" />
+                    <ReferenceLine
+                      x={currentIndex + 1}
+                      stroke="#8b2635"
+                      strokeDasharray="3 3"
+                      label={{ value: "current", position: "top", fill: "#8b2635", fontSize: 9 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="eval"
+                      stroke="#8b2635"
+                      strokeWidth={2}
+                      dot={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -291,9 +327,14 @@ export default function Analysis() {
           </div>
 
           {/* Move list */}
-          <div className="bg-[#262421] rounded border border-[#403d39] overflow-hidden flex flex-col h-[calc(100vh-12rem)]">
-            <div className="bg-[#21201d] px-4 py-3 border-b border-[#403d39]">
-              <h3 className="text-sm font-black text-[#bababa] uppercase tracking-widest">Moves</h3>
+          <div
+            className="ed-card overflow-hidden flex flex-col h-[calc(100vh-12rem)]"
+          >
+            <div
+              className="px-4 py-3"
+              style={{ borderBottom: "1px solid var(--border)" }}
+            >
+              <div className="ed-eyebrow">Moves</div>
             </div>
             <div className="flex-grow overflow-y-auto p-2">
               <div className="grid grid-cols-[auto_1fr_1fr] gap-1 text-sm">
@@ -306,19 +347,34 @@ export default function Analysis() {
                   const blackIdx = rowIdx * 2 + 1;
                   return (
                     <div key={rowIdx} className="contents">
-                      <span className="text-[#bababa] text-xs font-bold py-1 px-2">{rowIdx + 1}.</span>
+                      <span
+                        className="text-xs py-1 px-2"
+                        style={{ color: "var(--muted)", fontFamily: "var(--font-mono)" }}
+                      >
+                        {rowIdx + 1}.
+                      </span>
                       <button
                         onClick={() => goToMove(whiteIdx)}
-                        className={`text-left px-2 py-1 rounded font-semibold ${currentIndex === whiteIdx ? "bg-[#3c3934]" : "hover:bg-[#3c3934]"}`}
-                        style={{ color: CLASSIFICATION_STYLE[pair[0].classification].color }}
+                        className="text-left px-2 py-1 transition-colors"
+                        style={{
+                          color: CLASSIFICATION_STYLE[pair[0].classification].color,
+                          fontWeight: 500,
+                          backgroundColor: currentIndex === whiteIdx ? "var(--surface-sunk)" : "transparent",
+                          borderRadius: 2,
+                        }}
                       >
                         {pair[0].san}
                       </button>
                       {pair[1] ? (
                         <button
                           onClick={() => goToMove(blackIdx)}
-                          className={`text-left px-2 py-1 rounded font-semibold ${currentIndex === blackIdx ? "bg-[#3c3934]" : "hover:bg-[#3c3934]"}`}
-                          style={{ color: CLASSIFICATION_STYLE[pair[1].classification].color }}
+                          className="text-left px-2 py-1 transition-colors"
+                          style={{
+                            color: CLASSIFICATION_STYLE[pair[1].classification].color,
+                            fontWeight: 500,
+                            backgroundColor: currentIndex === blackIdx ? "var(--surface-sunk)" : "transparent",
+                            borderRadius: 2,
+                          }}
                         >
                           {pair[1].san}
                         </button>
