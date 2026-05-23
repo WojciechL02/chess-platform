@@ -15,17 +15,19 @@ uv sync
 ```
 
 ### Deploy:
+To test locally:
 ```bash
 docker compose down
 docker compose up --build
 ./docker-push.sh
 ```
-other:
+
+to setup docker on GCP:
 ```bash
 gcloud services enable run.googleapis.com compute.googleapis.com artifactregistry.googleapis.com
 gcloud artifacts repositories create chess-platform-repo --repository-format=docker --location=europe-north2 --description="Docker repository for Chess Platform" --project=chess-platform-496620
 gcloud auth configure-docker europe-north2-docker.pkg.dev
-
+./docker-push.sh
 ```
 
 ## How to run:
