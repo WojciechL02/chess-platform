@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { useUserStore } from "../store/UserStore";
 import { Chess } from "chess.js";
+import { API_URL, WS_URL } from "../config";
 
 function GameOverModal({ winnerName, onGoToDashboard }) {
   return (
@@ -45,7 +46,6 @@ export default function GamePage() {
   const [gameOver, setGameOver] = useState(false);
   const [gameResult, setGameResult] = useState({ winnerName: null });
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL;
 
   const [whiteId, setWhiteId] = useState(match?.players?.white || null);
   const isWhite = whiteId === userId;
@@ -66,7 +66,7 @@ export default function GamePage() {
     const [activeColor, setActiveColor] = useState("w");
 
   useEffect(() => {
-    const wsUrl = `${API_URL.replace("http", "ws")}/game/${gameId}?token=${token}`;
+    const wsUrl = `${WS_URL}/game/${gameId}?token=${token}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -134,7 +134,7 @@ export default function GamePage() {
     return () => {
         ws.close();
     };
-  }, [gameId, token, whiteId, API_URL, chessGame, match?.players?.white, userId]);
+  }, [gameId, token, whiteId, chessGame, match?.players?.white, userId]);
 
   useEffect(() => {
       if (!activeColor || gameOver) return;

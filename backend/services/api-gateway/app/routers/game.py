@@ -26,7 +26,7 @@ async def join_match(websocket: WebSocket, game_id: str):
     await websocket.accept()
 
     # Proxy to game-service, passing the token along
-    ws_url = GAME_SERVICE_URL.replace("http", "ws") + f"/ws/game/{game_id}?token={token}"
+    ws_url = GAME_SERVICE_URL.replace("http", "ws") + f"/game/{game_id}?token={token}"
     try:
         async with websockets.connect(ws_url) as ws_to_game:
             async def forward_from_client():

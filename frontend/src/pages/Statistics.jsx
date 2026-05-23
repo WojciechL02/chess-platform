@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useUserStore } from "../store/UserStore";
+import { API_URL } from "../config";
 import { 
   LineChart, 
   Line, 
@@ -18,7 +19,6 @@ export default function Statistics() {
   const [ratingHistory, setRatingHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (!token) {
@@ -61,7 +61,7 @@ export default function Statistics() {
     }
 
     fetchData();
-  }, [token, navigate, API_URL]);
+  }, [token, navigate]);
 
   if (loading) {
     return (

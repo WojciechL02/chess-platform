@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useUserStore } from "../store/UserStore";
+import { API_URL } from "../config";
 
 export default function Register() {
   const [form, setForm] = useState({ email: "", password: "", nickname: "" });
@@ -19,7 +20,6 @@ export default function Register() {
     setError(null);
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

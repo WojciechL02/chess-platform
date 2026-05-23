@@ -25,7 +25,7 @@ async def join_match(websocket: WebSocket):
 
     await websocket.accept()
 
-    ws_url = MATCHMAKING_SERVICE_URL.replace("http", "ws") + f"/ws/join?token={token}"
+    ws_url = MATCHMAKING_SERVICE_URL.replace("http", "ws") + f"/match/join?token={token}"
     try:
         async with websockets.connect(ws_url) as ws_to_mm:
             # 1. Forward the first message (containing game_format)

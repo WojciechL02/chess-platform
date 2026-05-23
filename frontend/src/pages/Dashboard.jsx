@@ -4,6 +4,7 @@ import { useUserStore } from "../store/UserStore";
 import Leaderboard from "../components/Leaderboard";
 import LastGames from "../components/LastGames";
 import ProfileInfo from "../components/ProfileInfo";
+import { API_URL, WS_URL } from "../config";
 
 function GameHistoryTable({ games }) {
   return (
@@ -70,7 +71,6 @@ export default function Dashboard() {
   const [gameFormat, setGameFormat] = useState("blitz");
   const [socket, setSocket] = useState(null);
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (!token) {
@@ -116,13 +116,13 @@ export default function Dashboard() {
     }
 
     fetchData();
-  }, [token, API_URL, setUserStore]);
+  }, [token, setUserStore]);
 
   const startNewGame = async () => {
       setMatchmaking(true);
 
       try {
-        const wsUrl = `${API_URL.replace("http", "ws")}/match/join?token=${token}`;
+        const wsUrl = `${WS_URL}/match/join?token=${token}`;
         const newSocket = new WebSocket(wsUrl);
         setSocket(newSocket);
 

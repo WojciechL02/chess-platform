@@ -41,10 +41,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 connections = {}
 
 
-@app.websocket("/ws/join")
+@app.websocket("/match/join")
 async def join_queue(websocket: WebSocket):
     user = await authenticate_websocket(websocket)
     if not user:

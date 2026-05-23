@@ -37,7 +37,12 @@ app.add_middleware(
 )
 
 
-@app.websocket("/ws/game/{game_id}")
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.websocket("/game/{game_id}")
 async def handle_game(websocket: WebSocket, game_id: str):
     user = await authenticate_websocket(websocket)
     if not user:

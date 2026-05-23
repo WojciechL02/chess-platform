@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useUserStore } from "../store/UserStore";
+import { API_URL } from "../config";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -23,7 +24,6 @@ export default function Login() {
       formData.append("username", form.email);
       formData.append("password", form.password);
 
-      const API_URL = import.meta.env.VITE_API_URL;
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
