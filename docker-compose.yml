@@ -1,34 +1,34 @@
 services:
   api-gateway:
     build:
-      context: .
+      context: ./backend
       dockerfile: services/api-gateway/Dockerfile
     ports:
       - "8000:8000"
-    env_file: .env
+    env_file: ./backend/.env
 
   users-service:
     build:
-      context: .
+      context: ./backend
       dockerfile: services/users-service/Dockerfile
-    env_file: .env
+    env_file: ./backend/.env
 
   game-service:
     build:
-      context: .
+      context: ./backend
       dockerfile: services/game-service/Dockerfile
-    env_file: .env
+    env_file: ./backend/.env
 
   matchmaker:
     build:
-      context: .
+      context: ./backend
       dockerfile: services/matchmaker/Dockerfile
-    env_file: .env
+    env_file: ./backend/.env
 
   frontend:
     build:
-      context: ../frontend
+      context: ./frontend
       dockerfile: Dockerfile
     ports:
       - "8080:80"
-    env_file: .env
+    env_file: ./backend/.env
