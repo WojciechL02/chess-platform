@@ -1,10 +1,13 @@
 # Use a Python base image
 FROM python:3.13-slim-bookworm
 
-# Install Stockfish (required by analysis.py via python-chess)
+# Install Stockfish (required by analysis.py via python-chess).
+# Debian's `stockfish` package installs to /usr/games/stockfish, which is
+# not on the default PATH in slim images — point STOCKFISH_PATH at it explicitly.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends stockfish \
   && rm -rf /var/lib/apt/lists/*
+ENV STOCKFISH_PATH=/usr/games/stockfish
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uv/bin/uv
