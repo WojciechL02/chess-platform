@@ -93,10 +93,15 @@ After `terraform apply` finishes, the load balancer's public IP is printed as th
 
 ### Redeploying after code changes
 ```bash
-./docker-push.sh
-# Cloud Run pulls :latest on next request; force a new revision with:
-gcloud run services update users-service --region="$GCP_REGION" --project="$GCP_PROJECT_ID"
-# (repeat for matchmaker, game-service, analysis-service, frontend)
+./docker-push.sh    # rebuild & push the new images
+
+# Cloud Run revisions are pinned to an image digest at creation, so pushing a new
+# :latest does NOT update running services. Force a new revision per service:
+IMG_PREFIX="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/chess-platform-repo"
+for svc in users-service matchmaker game-service analysis-service frontend; do
+  gcloud run deploy "${svc}" --image="${IMG_PREFIX}/${svc}:latest" \
+    --region="${GCP_REGION}" --project="${GCP_PROJECT_ID}"
+done
 ```
 
 ### Tear down (stop billing)
