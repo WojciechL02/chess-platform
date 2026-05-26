@@ -1,13 +1,13 @@
 resource "google_compute_address" "lb_ip" {
   name         = "chess-lb-ip"
-  region       = "europe-north2"
+  region       = var.region
   network_tier = "STANDARD"
 }
 
 # Serverless NEGs for each Cloud Run service
 resource "google_compute_region_network_endpoint_group" "users_neg" {
   name                  = "users-service-neg"
-  region                = "europe-north2"
+  region                = var.region
   network_endpoint_type = "SERVERLESS"
   cloud_run {
     service = "users-service"
@@ -16,7 +16,7 @@ resource "google_compute_region_network_endpoint_group" "users_neg" {
 
 resource "google_compute_region_network_endpoint_group" "matchmaker_neg" {
   name                  = "matchmaker-neg"
-  region                = "europe-north2"
+  region                = var.region
   network_endpoint_type = "SERVERLESS"
   cloud_run {
     service = "matchmaker"
@@ -25,7 +25,7 @@ resource "google_compute_region_network_endpoint_group" "matchmaker_neg" {
 
 resource "google_compute_region_network_endpoint_group" "game_neg" {
   name                  = "game-service-neg"
-  region                = "europe-north2"
+  region                = var.region
   network_endpoint_type = "SERVERLESS"
   cloud_run {
     service = "game-service"
@@ -34,7 +34,7 @@ resource "google_compute_region_network_endpoint_group" "game_neg" {
 
 resource "google_compute_region_network_endpoint_group" "frontend_neg" {
   name                  = "frontend-neg"
-  region                = "europe-north2"
+  region                = var.region
   network_endpoint_type = "SERVERLESS"
   cloud_run {
     service = "frontend"
@@ -44,7 +44,7 @@ resource "google_compute_region_network_endpoint_group" "frontend_neg" {
 # Services
 resource "google_compute_region_backend_service" "users_backend" {
   name                  = "users-backend"
-  region                = "europe-north2"
+  region                = var.region
   protocol              = "HTTP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
 
@@ -57,7 +57,7 @@ resource "google_compute_region_backend_service" "users_backend" {
 
 resource "google_compute_region_backend_service" "matchmaker_backend" {
   name                  = "matchmaker-backend"
-  region                = "europe-north2"
+  region                = var.region
   protocol              = "HTTP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
 
@@ -70,7 +70,7 @@ resource "google_compute_region_backend_service" "matchmaker_backend" {
 
 resource "google_compute_region_backend_service" "game_backend" {
   name                  = "game-backend"
-  region                = "europe-north2"
+  region                = var.region
   protocol              = "HTTP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
 
@@ -83,7 +83,7 @@ resource "google_compute_region_backend_service" "game_backend" {
 
 resource "google_compute_region_backend_service" "frontend_backend" {
   name                  = "frontend-backend"
-  region                = "europe-north2"
+  region                = var.region
   protocol              = "HTTP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
 
@@ -97,7 +97,7 @@ resource "google_compute_region_backend_service" "frontend_backend" {
 # URL Map
 resource "google_compute_region_url_map" "lb_url_map" {
   name            = "chess-lb-url-map"
-  region          = "europe-north2"
+  region          = var.region
   default_service = google_compute_region_backend_service.frontend_backend.id
 
   host_rule {
@@ -128,8 +128,8 @@ resource "google_compute_region_url_map" "lb_url_map" {
 
 # SSL Certificate
 resource "google_compute_region_ssl_certificate" "chess_cert" {
-  name     = "chess-cert"
-  region   = "europe-north2"
+  name        = "chess-cert"
+  region      = var.region
   private_key = file("${path.module}/../server.key")
   certificate = file("${path.module}/../server.crt")
 }
@@ -137,7 +137,7 @@ resource "google_compute_region_ssl_certificate" "chess_cert" {
 # Target HTTPS Proxy
 resource "google_compute_region_target_https_proxy" "lb_https_proxy" {
   name             = "chess-lb-https-proxy"
-  region           = "europe-north2"
+  region           = var.region
   url_map          = google_compute_region_url_map.lb_url_map.id
   ssl_certificates = [google_compute_region_ssl_certificate.chess_cert.id]
 }
@@ -145,7 +145,7 @@ resource "google_compute_region_target_https_proxy" "lb_https_proxy" {
 # Forwarding Rule — HTTPS
 resource "google_compute_forwarding_rule" "lb_https_forwarding_rule" {
   name                  = "chess-lb-https-forwarding-rule"
-  region                = "europe-north2"
+  region                = var.region
   ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   port_range            = "443"
@@ -159,14 +159,14 @@ resource "google_compute_forwarding_rule" "lb_https_forwarding_rule" {
 # Target HTTP Proxy
 resource "google_compute_region_target_http_proxy" "lb_proxy" {
   name    = "chess-lb-proxy"
-  region  = "europe-north2"
+  region  = var.region
   url_map = google_compute_region_url_map.lb_url_map.id
 }
 
 # Forwarding Rule — HTTP
 resource "google_compute_forwarding_rule" "lb_forwarding_rule" {
   name                  = "chess-lb-forwarding-rule"
-  region                = "europe-north2"
+  region                = var.region
   ip_protocol           = "TCP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
   port_range            = "80"
@@ -180,7 +180,7 @@ resource "google_compute_forwarding_rule" "lb_forwarding_rule" {
 # Proxy Subnet (Required for Regional LB)
 resource "google_compute_subnetwork" "proxy_subnet" {
   name          = "chess-lb-proxy-subnet"
-  region        = "europe-north2"
+  region        = var.region
   network       = "default"
   ip_cidr_range = "10.100.0.0/24"
   purpose       = "REGIONAL_MANAGED_PROXY"

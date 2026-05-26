@@ -1,31 +1,29 @@
 variable "region" {
-  type    = string
-  default = "europe-north2"
+  type = string
 }
 
 variable "project_id" {
-  type    = string
-  default = "chess-platform-496620"
+  type = string
 }
 
 variable "postgres_url" {
-  type    = string
-  default = "<POSTGRES_URL>"
+  type      = string
+  sensitive = true
 }
 
 variable "redis_url" {
-  type    = string
-  default = "<REDIS_URL>"
+  type      = string
+  sensitive = true
 }
 
 variable "mongo_url" {
-  type    = string
-  default = "<MONGO_URL>"
+  type      = string
+  sensitive = true
 }
 
 variable "jwt_secret" {
-  type    = string
-  defult = "7fe0511af21c346fb5f7fadf4469372a"
+  type      = string
+  sensitive = true
 }
 
 # Users Service
