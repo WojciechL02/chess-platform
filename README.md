@@ -6,6 +6,12 @@
 - [Node.js](https://nodejs.org/) (frontend)
 - [Terraform](https://developer.hashicorp.com/terraform/install) (GCP deployment)
 - [gcloud CLI](https://cloud.google.com/sdk/docs/install), authenticated against your GCP project (`gcloud auth login` and `gcloud auth application-default login`)
+- [Stockfish](https://stockfishchess.org/) chess engine (only needed when running `analysis-service` outside Docker):
+  ```bash
+  brew install stockfish     # macOS
+  # or: apt install stockfish # Debian/Ubuntu
+  ```
+  Set `STOCKFISH_PATH` in `./backend/.env` if it isn't on `$PATH`.
 
 ## Environment files
 For each `.env_example` file in the repo, copy it to `.env` in the same directory and fill in the values:
@@ -30,6 +36,7 @@ uv run -- fastapi dev services/api-gateway/app/main.py --port 8000
 uv run -- fastapi dev services/users-service/app/main.py --port 8001
 uv run -- fastapi dev services/matchmaker/app/main.py --port 8002
 uv run -- fastapi dev services/game-service/app/main.py --port 8003
+uv run -- fastapi dev services/analysis-service/app/main.py --port 8004
 ```
 
 ### Run frontend
@@ -89,7 +96,7 @@ After `terraform apply` finishes, the load balancer's public IP is printed as th
 ./docker-push.sh
 # Cloud Run pulls :latest on next request; force a new revision with:
 gcloud run services update users-service --region="$GCP_REGION" --project="$GCP_PROJECT_ID"
-# (repeat for matchmaker, game-service, frontend)
+# (repeat for matchmaker, game-service, analysis-service, frontend)
 ```
 
 ### Tear down (stop billing)
