@@ -32,6 +32,15 @@ resource "google_compute_region_network_endpoint_group" "game_neg" {
   }
 }
 
+resource "google_compute_region_network_endpoint_group" "analysis_neg" {
+  name                  = "analysis-service-neg"
+  region                = var.region
+  network_endpoint_type = "SERVERLESS"
+  cloud_run {
+    service = "analysis-service"
+  }
+}
+
 resource "google_compute_region_network_endpoint_group" "frontend_neg" {
   name                  = "frontend-neg"
   region                = var.region
@@ -81,6 +90,19 @@ resource "google_compute_region_backend_service" "game_backend" {
   }
 }
 
+resource "google_compute_region_backend_service" "analysis_backend" {
+  name                  = "analysis-backend"
+  region                = var.region
+  protocol              = "HTTP"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+
+  backend {
+    group           = google_compute_region_network_endpoint_group.analysis_neg.id
+    capacity_scaler = 1.0
+    balancing_mode  = "UTILIZATION"
+  }
+}
+
 resource "google_compute_region_backend_service" "frontend_backend" {
   name                  = "frontend-backend"
   region                = var.region
@@ -122,6 +144,11 @@ resource "google_compute_region_url_map" "lb_url_map" {
     path_rule {
       paths   = ["/game/*"]
       service = google_compute_region_backend_service.game_backend.id
+    }
+
+    path_rule {
+      paths   = ["/analysis/*"]
+      service = google_compute_region_backend_service.analysis_backend.id
     }
   }
 }
