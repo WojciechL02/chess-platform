@@ -22,5 +22,10 @@ docker buildx build --platform linux/amd64 --push \
   ./backend
 
 docker buildx build --platform linux/amd64 --push \
+  -t "$BASE_URL/analysis-service:latest" \
+  -f backend/services/analysis-service/Dockerfile \
+  ./backend
+
+docker buildx build --platform linux/amd64 --push \
   -t "$BASE_URL/frontend:latest" \
   ./frontend
