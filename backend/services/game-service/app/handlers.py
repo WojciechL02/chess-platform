@@ -260,9 +260,18 @@ async def handle_draw_accept(redis: Redis, mongo: AsyncMongoClient, game_id: str
     return {"status": "success"}
 
 
+async def handle_draw_decline(redis: Redis, mongo: AsyncMongoClient, game_id: str, user_id: str, data: dict):
+    await redis.publish(f"game:{game_id}", json.dumps({
+        "event": "draw_declined",
+        "declined_by": user_id
+    }))
+    return {"status": "success"}
+
+
 EVENT_HANDLERS = {
     "move": handle_move,
     "resign": handle_resign,
     "draw_offer": handle_draw_offer,
     "draw_accept": handle_draw_accept,
+    "draw_decline": handle_draw_decline,
 }

@@ -62,6 +62,40 @@ function PlayerRow({ name, time, isActive, isYou }) {
   );
 }
 
+function DrawOfferModal({ opponentName, onAccept, onDecline }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm p-4"
+      style={{ backgroundColor: "rgba(245, 241, 234, 0.92)" }}
+    >
+      <div className="ed-card p-10 max-w-sm w-full text-center">
+        <div className="ed-eyebrow mb-3">Draw offered</div>
+        <h2 className="serif text-3xl mb-3" style={{ color: "var(--ink)" }}>
+          {opponentName} offers a draw
+        </h2>
+        <p className="text-sm mb-8" style={{ color: "var(--ink-soft)" }}>
+          Accepting ends the game with no winner.
+        </p>
+        <hr className="ed-rule mb-8" />
+        <button
+          onClick={onAccept}
+          className="ed-btn ed-btn-primary w-full mb-3"
+          style={{ padding: "0.85rem 1.25rem" }}
+        >
+          Accept
+        </button>
+        <button
+          onClick={onDecline}
+          className="ed-btn w-full"
+          style={{ padding: "0.85rem 1.25rem" }}
+        >
+          Decline
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function GameOverModal({ winnerName, onGoToDashboard, onAnalyze }) {
   return (
     <div
@@ -136,6 +170,7 @@ export default function GamePage() {
   const [myTime, setMyTime] = useState(180);
   const [opponentTime, setOpponentTime] = useState(180);
   const [activeColor, setActiveColor] = useState("w");
+  const [drawOfferFrom, setDrawOfferFrom] = useState(null);
 
   useEffect(() => {
     const wsUrl = `${WS_URL}/game/${gameId}?token=${token}`;
@@ -186,10 +221,19 @@ export default function GamePage() {
         setActiveColor(msg.turn === currentWhiteId ? "w" : "b");
       }
 
+      if (msg.event === "draw_offer") {
+        setDrawOfferFrom(msg.offered_by);
+      }
+
+      if (msg.event === "draw_declined") {
+        setDrawOfferFrom(null);
+      }
+
       if (msg.event === "game_over") {
         setGameResult({ winnerName: msg.winner_name });
         setGameOver(true);
         setActiveColor(null);
+        setDrawOfferFrom(null);
         ws.close();
       }
     };
@@ -255,8 +299,22 @@ export default function GamePage() {
 
   const offerDraw = () => {
     if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ event: "offer_draw" }));
+      socket.send(JSON.stringify({ event: "draw_offer" }));
     }
+  };
+
+  const acceptDraw = () => {
+    if (socket?.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ event: "draw_accept" }));
+    }
+    setDrawOfferFrom(null);
+  };
+
+  const declineDraw = () => {
+    if (socket?.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ event: "draw_decline" }));
+    }
+    setDrawOfferFrom(null);
   };
 
   const resign = () => {
@@ -288,6 +346,14 @@ export default function GamePage() {
           winnerName={gameResult.winnerName}
           onGoToDashboard={() => navigate("/dashboard")}
           onAnalyze={() => navigate(`/analysis/${gameId}`)}
+        />
+      )}
+
+      {drawOfferFrom && drawOfferFrom !== userId && !gameOver && (
+        <DrawOfferModal
+          opponentName={opponentName}
+          onAccept={acceptDraw}
+          onDecline={declineDraw}
         />
       )}
 
@@ -380,10 +446,11 @@ export default function GamePage() {
             >
               <button
                 onClick={offerDraw}
+                disabled={!!drawOfferFrom || gameOver}
                 className="ed-btn ed-btn-ghost text-sm"
                 style={{ padding: "0.5rem 0.75rem" }}
               >
-                Offer draw
+                {drawOfferFrom === userId ? "Draw offered…" : "Offer draw"}
               </button>
               <button
                 onClick={resign}
