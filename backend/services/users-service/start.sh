@@ -2,8 +2,12 @@
 set -e
 
 # Run migrations
-echo "Running migrations..."
-alembic upgrade head
+if compgen -G "alembic/versions/*.py" > /dev/null; then
+  echo "Running migrations..."
+  PYTHONPATH="$(pwd)" alembic upgrade head
+else
+  echo "No migration scripts in alembic/versions, skipping."
+fi
 
 # Start the application
 echo "Starting application..."
