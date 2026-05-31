@@ -26,6 +26,8 @@ class UserUpdate(schemas.BaseUserUpdate):
 
 class GameHistory(BaseModel):
     id: uuid.UUID
+    white_id: uuid.UUID
+    black_id: uuid.UUID
     white_nickname: str
     black_nickname: str
     status: str

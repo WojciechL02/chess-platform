@@ -12,7 +12,22 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
 from common.auth import authenticate_websocket
 
 from .storage_utils import init_redis, close_redis, init_mongo, close_mongo
-from .handlers import EVENT_HANDLERS, ensure_game_state_exists
+from .handlers import EVENT_HANDLERS, ensure_game_state_exists, process_timeouts
+
+
+async def timeout_worker(app: FastAPI):
+    """
+    Background task that periodically checks for timed-out games.
+    """
+    while True:
+        try:
+            redis = app.state.redis
+            mongo = app.state.mongo
+            await process_timeouts(redis, mongo)
+        except Exception as e:
+            print(f"Error in timeout worker: {e}")
+        
+        await asyncio.sleep(1)
 
 
 @asynccontextmanager
@@ -20,8 +35,16 @@ async def lifespan(app: FastAPI):
     # startup
     await init_redis(app)
     await init_mongo(app)
+    timeout_task = asyncio.create_task(timeout_worker(app))
+    
     yield
     # shutdown
+    timeout_task.cancel()
+    try:
+        await timeout_task
+    except asyncio.CancelledError:
+        pass
+
     await close_redis(app)
     await close_mongo(app)
 
