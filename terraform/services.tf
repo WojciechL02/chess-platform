@@ -1,31 +1,29 @@
 variable "region" {
-  type    = string
-  default = "europe-north2"
+  type = string
 }
 
 variable "project_id" {
-  type    = string
-  default = "chess-platform-496620"
+  type = string
 }
 
 variable "postgres_url" {
-  type    = string
-  default = "<POSTGRES_URL>"
+  type      = string
+  sensitive = true
 }
 
 variable "redis_url" {
-  type    = string
-  default = "<REDIS_URL>"
+  type      = string
+  sensitive = true
 }
 
 variable "mongo_url" {
-  type    = string
-  default = "<MONGO_URL>"
+  type      = string
+  sensitive = true
 }
 
 variable "jwt_secret" {
-  type    = string
-  defult = "7fe0511af21c346fb5f7fadf4469372a"
+  type      = string
+  sensitive = true
 }
 
 # Users Service
@@ -115,6 +113,26 @@ resource "google_cloud_run_v2_service" "game_service" {
   }
 }
 
+# Analysis Service
+resource "google_cloud_run_v2_service" "analysis_service" {
+  name     = "analysis-service"
+  location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL"
+
+  template {
+    containers {
+      image = "europe-north2-docker.pkg.dev/${var.project_id}/chess-platform-repo/analysis-service:latest"
+      ports {
+        container_port = 8000
+      }
+      env {
+        name  = "MONGO_URL"
+        value = var.mongo_url
+      }
+    }
+  }
+}
+
 # IAM: Allow Unauthenticated Access
 resource "google_cloud_run_service_iam_member" "users_public" {
   location = google_cloud_run_v2_service.users_service.location
@@ -137,6 +155,13 @@ resource "google_cloud_run_service_iam_member" "game_public" {
   member   = "allUsers"
 }
 
+resource "google_cloud_run_service_iam_member" "analysis_public" {
+  location = google_cloud_run_v2_service.analysis_service.location
+  service  = google_cloud_run_v2_service.analysis_service.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
 output "users_service_uri" {
   value = google_cloud_run_v2_service.users_service.uri
 }
@@ -147,6 +172,10 @@ output "matchmaker_uri" {
 
 output "game_service_uri" {
   value = google_cloud_run_v2_service.game_service.uri
+}
+
+output "analysis_service_uri" {
+  value = google_cloud_run_v2_service.analysis_service.uri
 }
 
 # Frontend

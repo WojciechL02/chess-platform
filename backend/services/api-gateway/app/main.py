@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, match, players, users, game
+from app.routers import auth, match, players, users, game, analysis
 from app.rate_limit import init_redis, close_redis, rate_limiter
 
 
@@ -42,6 +42,7 @@ app.include_router(match.router)
 app.include_router(game.router)
 app.include_router(players.router)
 app.include_router(users.router)
+app.include_router(analysis.router)
 
 
 @app.get("/health")
