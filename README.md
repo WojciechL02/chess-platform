@@ -1,6 +1,6 @@
-# ♟️ Chess Platform
+# ♟️ Online Chess Platform
 
-> A _Chess.com_-inspired web platform for playing, analyzing and tracking chess games online.
+> A web platform for playing, analyzing and tracking chess games online.
 
 ---
 
@@ -20,36 +20,9 @@ Chess Platform is a full-stack, microservice-based application that lets users r
 
 ### Architecture
 
-```mermaid
-flowchart TD
-    Client([🌐 Browser])
-    LB[Regional HTTPS Load Balancer<br/>path-based routing]
-    FE[frontend<br/>React + nginx]
-    US[users-service]
-    MM[matchmaker]
-    GS[game-service]
-    AS[analysis-service]
-    PG[(PostgreSQL)]
-    RD[(Redis)]
-    MG[(MongoDB)]
-    SF{{Stockfish}}
+![Architecture Diagram](assets/architecture.png)
 
-    Client --> LB
-    LB --> FE
-    LB --> US
-    LB --> MM
-    LB --> GS
-    LB --> AS
-
-    US --> PG
-    MM --> RD
-    MM --> PG
-    GS --> RD
-    GS --> PG
-    GS --> MG
-    AS --> MG
-    AS --> SF
-```
+[📄 Download PDF Version](assets/architecture.pdf)
 
 **Routing.** A regional external HTTPS load balancer fans incoming requests out to the right Cloud Run service based on URL prefix:
 
