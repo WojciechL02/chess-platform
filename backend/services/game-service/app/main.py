@@ -1,9 +1,33 @@
 from contextlib import asynccontextmanager
 import asyncio
 import json
+import sys
+import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+
+# Add parent directory to sys.path to allow importing from common
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+from common.auth import authenticate_websocket
+
 from .storage_utils import init_redis, close_redis, init_mongo, close_mongo
-from .handlers import EVENT_HANDLERS, ensure_game_state_exists
+from .handlers import EVENT_HANDLERS, ensure_game_state_exists, process_timeouts
+
+
+async def timeout_worker(app: FastAPI):
+    """
+    Background task that periodically checks for timed-out games.
+    """
+    while True:
+        try:
+            redis = app.state.redis
+            mongo = app.state.mongo
+            await process_timeouts(redis, mongo)
+        except Exception as e:
+            print(f"Error in timeout worker: {e}")
+        
+        await asyncio.sleep(1)
 
 
 @asynccontextmanager
@@ -11,17 +35,43 @@ async def lifespan(app: FastAPI):
     # startup
     await init_redis(app)
     await init_mongo(app)
+    timeout_task = asyncio.create_task(timeout_worker(app))
+    
     yield
     # shutdown
+    timeout_task.cancel()
+    try:
+        await timeout_task
+    except asyncio.CancelledError:
+        pass
+
     await close_redis(app)
     await close_mongo(app)
 
 
 app = FastAPI(title="Game Service", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.websocket("/ws/game/{game_id}/{user_id}")
-async def handle_game(websocket: WebSocket, game_id: str, user_id: str):
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.websocket("/game/{game_id}")
+async def handle_game(websocket: WebSocket, game_id: str):
+    user = await authenticate_websocket(websocket)
+    if not user:
+        return
+    
+    user_id = user["id"]
     await websocket.accept()
     r = websocket.app.state.redis
     m = websocket.app.state.mongo

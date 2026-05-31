@@ -1,6 +1,6 @@
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
+from sqlalchemy import select
 from datetime import datetime, UTC
 import json
 import chess
@@ -11,6 +11,20 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 from common.models.game import Game, GameStatus, GameFormat, User, RatingHistory
+
+
+GAME_TIMEOUTS_KEY = "game_timeouts"
+
+
+async def update_timeout_index(redis: Redis, game_id: str, turn: str, white_time: float, black_time: float, white_id: str, black_id: str):
+    """
+    Calculates the absolute timestamp when the current player will time out
+    and updates the Redis Sorted Set.
+    """
+    now = datetime.now(UTC).timestamp()
+    remaining_time = white_time if turn == white_id else black_time
+    timeout_at = now + remaining_time
+    await redis.zadd(GAME_TIMEOUTS_KEY, {game_id: timeout_at})
 
 
 async def save_to_document_store(mongo: AsyncMongoClient, game_id: str, moves: list, final_fen: str, winner_id: str):
@@ -45,7 +59,6 @@ async def ensure_game_state_exists(redis: Redis, game_id: str):
 
             # Note: If game is in_progress but Redis state was lost,
             # we initialize a new board if it's a new or resumed game.
-
             await redis.hset(game_key, mapping={
                 "format": game.format,
                 "fen": chess.Board().fen(),
@@ -57,6 +70,15 @@ async def ensure_game_state_exists(redis: Redis, game_id: str):
                 "move_number": 0,
                 "last_move_at": str(datetime.now(UTC).timestamp()),
             })
+            await update_timeout_index(
+                redis, 
+                game_id, 
+                str(game.white_id), 
+                enum_format.total_time, 
+                enum_format.total_time, 
+                str(game.white_id), 
+                str(game.black_id)
+            )
             if not await redis.exists(moves_key):
                 await redis.delete(moves_key)
 
@@ -130,6 +152,7 @@ async def finalize_game(redis: Redis, mongo: AsyncMongoClient, game_id: str, sta
 
     # 4. Cleanup Redis
     await redis.delete(game_key, moves_key)
+    await redis.zrem(GAME_TIMEOUTS_KEY, game_id)
 
     # 5. Notify players
     winner_name = None
@@ -143,6 +166,29 @@ async def finalize_game(redis: Redis, mongo: AsyncMongoClient, game_id: str, sta
         "winner_id": str(winner_id) if winner_id else None,
         "winner_name": winner_name
     }))
+
+
+async def process_timeouts(redis: Redis, mongo: AsyncMongoClient):
+    """
+    Distributed worker function: 
+      - Finds games that have expired scores in the ZSET.
+      - Atomically removes them to 'claim' the processing.
+      - Finalizes those games.
+    """
+    now = datetime.now(UTC).timestamp()
+    expired_games = await redis.zrangebyscore(GAME_TIMEOUTS_KEY, 0, now, start=0, num=50)
+    
+    for game_id in expired_games:
+        if await redis.zrem(GAME_TIMEOUTS_KEY, game_id):
+            state = await redis.hgetall(f"game_state_{game_id}")
+            if not state:
+                continue
+
+            turn = state["turn"]
+            white_id = state["white_id"]
+            black_id = state["black_id"]
+            winner_id = black_id if turn == white_id else white_id
+            await finalize_game(redis, mongo, game_id, GameStatus.finished, state["fen"], winner_id)
 
 
 async def handle_move(redis: Redis, mongo: AsyncMongoClient, game_id: str, user_id: str, data: dict):
@@ -185,7 +231,6 @@ async def handle_move(redis: Redis, mongo: AsyncMongoClient, game_id: str, user_
     board.push(move)
     next_turn = state["white_id"] if user_id == state["black_id"] else state["black_id"]
 
-    # Store move in Redis history
     move_data = {
         "move_number": next_move_number,
         "player_id": user_id,
@@ -195,16 +240,25 @@ async def handle_move(redis: Redis, mongo: AsyncMongoClient, game_id: str, user_
     }
     await redis.rpush(moves_key, json.dumps(move_data))
 
-    # Update current state in Redis
     current_state = {
         "fen": board.fen(),
         "turn": next_turn,
         "white_time": remaining_time if state["turn"] == state["white_id"] else state["white_time"],
-        "black_time": remaining_time if state["turn"] == state["black_id"] else state["white_time"],
+        "black_time": remaining_time if state["turn"] == state["black_id"] else state["black_time"],
         "move_number": next_move_number,
         "last_move_at": str(move_timestamp)
     }
     await redis.hset(game_key, mapping=current_state)
+
+    await update_timeout_index(
+        redis, 
+        game_id, 
+        next_turn, 
+        float(current_state["white_time"]), 
+        float(current_state["black_time"]),
+        state["white_id"],
+        state["black_id"]
+    )
 
     # Broadcast move
     await redis.publish(f"game:{game_id}", json.dumps({
@@ -242,7 +296,6 @@ async def handle_resign(redis: Redis, mongo: AsyncMongoClient, game_id: str, use
 
 
 async def handle_draw_offer(redis: Redis, mongo: AsyncMongoClient, game_id: str, user_id: str, data: dict):
-    # For now, just broadcast the offer
     await redis.publish(f"game:{game_id}", json.dumps({
         "event": "draw_offer",
         "offered_by": user_id
@@ -260,9 +313,18 @@ async def handle_draw_accept(redis: Redis, mongo: AsyncMongoClient, game_id: str
     return {"status": "success"}
 
 
+async def handle_draw_decline(redis: Redis, mongo: AsyncMongoClient, game_id: str, user_id: str, data: dict):
+    await redis.publish(f"game:{game_id}", json.dumps({
+        "event": "draw_declined",
+        "declined_by": user_id
+    }))
+    return {"status": "success"}
+
+
 EVENT_HANDLERS = {
     "move": handle_move,
     "resign": handle_resign,
     "draw_offer": handle_draw_offer,
     "draw_accept": handle_draw_accept,
+    "draw_decline": handle_draw_decline,
 }

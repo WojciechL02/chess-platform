@@ -29,6 +29,8 @@ async def history(session = Depends(get_async_session), user: User = Depends(cur
     stmt = (
         select(
             Game.id,
+            Game.white_id,
+            Game.black_id,
             WhiteUser.nickname.label("white_nickname"),
             BlackUser.nickname.label("black_nickname"),
             Game.status,
