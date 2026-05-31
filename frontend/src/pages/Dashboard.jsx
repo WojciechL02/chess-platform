@@ -5,17 +5,23 @@ import Leaderboard from "../components/Leaderboard";
 import ProfileInfo from "../components/ProfileInfo";
 import { API_URL, WS_URL } from "../config";
 
-function ResultBadge({ game }) {
+function ResultBadge({ game, currentUserId }) {
   if (game.status !== "finished") {
     return (
       <span
-        className="text-xs"
-        style={{ color: "var(--muted)", fontWeight: 500 }}
+        className="inline-block px-2 py-0.5 text-xs"
+        style={{
+          border: "1px solid var(--accent)",
+          color: "var(--accent)",
+          borderRadius: 2,
+          fontWeight: 500,
+        }}
       >
-        {game.status}
+        Pending
       </span>
     );
   }
+
   if (!game.winner_id) {
     return (
       <span
@@ -31,22 +37,27 @@ function ResultBadge({ game }) {
       </span>
     );
   }
+
+  const isWin = game.winner_id === currentUserId;
+  const color = isWin ? "var(--positive)" : "var(--negative)";
+  const label = isWin ? "Win" : "Loss";
+
   return (
     <span
       className="inline-block px-2 py-0.5 text-xs"
       style={{
-        border: "1px solid var(--accent)",
-        color: "var(--accent)",
+        border: `1px solid ${color}`,
+        color: color,
         borderRadius: 2,
         fontWeight: 500,
       }}
     >
-      Decisive
+      {label}
     </span>
   );
 }
 
-function GameHistoryTable({ games }) {
+function GameHistoryTable({ games, currentUserId }) {
   return (
     <div className="ed-card overflow-hidden">
       <div className="px-6 py-5" style={{ borderBottom: "1px solid var(--border)" }}>
@@ -91,9 +102,34 @@ function GameHistoryTable({ games }) {
                     {new Date(game.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-3.5 whitespace-nowrap text-sm" style={{ color: "var(--ink)" }}>
-                    <span style={{ fontWeight: 500 }}>{game.white_nickname}</span>
+                    <span style={{ fontWeight: game.white_id === currentUserId ? 600 : 500 }}>
+                      {game.white_id === currentUserId && (
+                        <span 
+                          title="Played as White"
+                          style={{ 
+                            display: 'inline-block', width: 9, height: 9, 
+                            border: '1px solid var(--border-strong)', 
+                            backgroundColor: 'var(--surface)', 
+                            marginRight: 6, verticalAlign: 'middle', marginBottom: 2 
+                          }} 
+                        />
+                      )}
+                      {game.white_nickname}
+                    </span>
                     <span style={{ color: "var(--muted)" }}> vs </span>
-                    <span style={{ fontWeight: 500 }}>{game.black_nickname}</span>
+                    <span style={{ fontWeight: game.black_id === currentUserId ? 600 : 500 }}>
+                      {game.black_nickname}
+                      {game.black_id === currentUserId && (
+                        <span 
+                          title="Played as Black"
+                          style={{ 
+                            display: 'inline-block', width: 9, height: 9, 
+                            backgroundColor: 'var(--ink)', 
+                            marginLeft: 6, verticalAlign: 'middle', marginBottom: 2 
+                          }} 
+                        />
+                      )}
+                    </span>
                   </td>
                   <td
                     className="px-6 py-3.5 whitespace-nowrap text-sm capitalize"
@@ -102,7 +138,7 @@ function GameHistoryTable({ games }) {
                     {game.format}
                   </td>
                   <td className="px-6 py-3.5 whitespace-nowrap">
-                    <ResultBadge game={game} />
+                    <ResultBadge game={game} currentUserId={currentUserId} />
                   </td>
                   <td className="px-6 py-3.5 whitespace-nowrap text-right">
                     {game.status === "finished" ? (
@@ -140,6 +176,7 @@ const FORMATS = [
 
 export default function Dashboard() {
   const token = useUserStore((state) => state.token);
+  const userId = useUserStore((state) => state.userId);
   const setUserStore = useUserStore((state) => state.setUser);
   const [user, setUser] = useState(null);
   const [lastGames, setLastGames] = useState([]);
@@ -348,7 +385,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <GameHistoryTable games={lastGames} />
+            <GameHistoryTable games={lastGames} currentUserId={userId} />
           </div>
           <div className="lg:col-span-1">
             <Leaderboard players={leaderboard} />
